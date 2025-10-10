@@ -51,6 +51,8 @@ English version: [Link](https://github.com/fantomcheg/vot-cli2025/blob/main/READ
 
 ## 📖 Использование
 
+> 💡 **Больше примеров:** [EXAMPLES.md](./EXAMPLES.md)
+
 ### Примеры использования:
 
 - `vot-cli [options] [args] <link> [link2] [link3] ...` — общий пример

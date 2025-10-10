@@ -51,6 +51,8 @@ A small script that allows you to download an audio translation from Yandex via 
 
 ## 📖 Using
 
+> 💡 **More examples:** [EXAMPLES.md](./EXAMPLES.md)
+
 ### Usage examples:
 
 - `vot-cli [options] [args] <link> [link2] [link3] ...` — general example
