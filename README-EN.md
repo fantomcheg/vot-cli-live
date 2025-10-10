@@ -18,9 +18,10 @@
 |---------|-------------|--------|
 | 🎤 **Live Voices** | Support for `useLivelyVoice` - more natural voiceover from Yandex | ✅ Working |
 | 🎚️ **Voice Type Selection** | `--voice-style` parameter (live/tts) to switch between live voices and TTS | ✅ Working |
+| 📝 **Smart Filenames** | Automatic naming by video title (e.g., `Rick_Astley_-_Never_Gonna_Give_You_Up.mp3`) | ✅ Working |
 | 🎬 **Video Merging** | `--merge-video` parameter to create video with embedded translation | ⚠️ Experimental |
 | 🔊 **Volume Control** | `--translation-volume` and `--original-volume` parameters | ✅ Working |
-| 📝 **Updated Documentation** | Usage examples in Russian and English | ✅ Ready |
+| 📚 **Complete Documentation** | Wiki with 1200+ lines, examples and FAQ | ✅ Ready |
 
 ---
 
@@ -33,8 +34,9 @@ npm install -g vot-cli-live
 
 ### Usage:
 ```bash
-# Download translation with live voices (default)
+# Download translation with live voices (file will be named after video title)
 vot-cli-live --output="." "https://www.youtube.com/watch?v=VIDEO_ID"
+# Result: Rick_Astley_-_Never_Gonna_Give_You_Up.mp3
 
 # Download with standard TTS
 vot-cli-live --output="." --voice-style=tts "https://www.youtube.com/watch?v=VIDEO_ID"
