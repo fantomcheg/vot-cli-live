@@ -47,6 +47,10 @@ vot-cli-live --output="." --merge-video "https://www.youtube.com/watch?v=dQw4w9W
 
 # Video with translation WITHOUT original audio
 vot-cli-live --output="." --merge-video --keep-original-audio=false "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Volume control: quiet original (30%), loud translation (150%)
+vot-cli-live --output="." --merge-video --original-volume=0.3 --translation-volume=1.5 "https://www.youtube.com/watch?v=VIDEO_ID"
+# Perfect for language learning: hear original in background + clear translation
 ```
 
 ---

@@ -47,6 +47,10 @@ vot-cli-live --output="." --merge-video "https://www.youtube.com/watch?v=dQw4w9W
 
 # Видео с переводом БЕЗ оригинального аудио
 vot-cli-live --output="." --merge-video --keep-original-audio=false "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Настройка громкости: тихий оригинал (30%), громкий перевод (150%)
+vot-cli-live --output="." --merge-video --original-volume=0.3 --translation-volume=1.5 "https://www.youtube.com/watch?v=VIDEO_ID"
+# Идеально для изучения языка: слышишь оригинал на фоне + чёткий перевод
 ```
 
 ---
