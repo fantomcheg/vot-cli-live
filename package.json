@@ -1,5 +1,5 @@
 {
-  "name": "@fantomcheg/vot-cli-live",
+  "name": "vot-cli-live",
   "version": "1.5.0",
   "description": "VOT-CLI with Yandex live voices support. Fork of FOSWLY/vot-cli with useLivelyVoice feature.",
   "type": "module",
