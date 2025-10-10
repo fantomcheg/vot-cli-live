@@ -34,15 +34,19 @@ npm install -g vot-cli-live
 
 ### Использование:
 ```bash
-# Скачать перевод с живыми голосами (файл назовётся по названию видео)
-vot-cli-live --output="." "https://www.youtube.com/watch?v=VIDEO_ID"
+# Скачать только аудио перевод с живыми голосами (файл назовётся по названию видео)
+vot-cli-live --output="." "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 # Результат: Rick_Astley_-_Never_Gonna_Give_You_Up.mp3
 
 # Скачать со стандартным TTS
 vot-cli-live --output="." --voice-style=tts "https://www.youtube.com/watch?v=VIDEO_ID"
 
-# Скачать видео с встроенным переводом (требует yt-dlp и ffmpeg)
-vot-cli-live --output="." --merge-video "https://www.youtube.com/watch?v=VIDEO_ID"
+# Скачать ВИДЕО с встроенным переводом (требует yt-dlp и ffmpeg)
+vot-cli-live --output="." --merge-video "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+# Результат: Rick_Astley_-_Never_Gonna_Give_You_Up.mp4 (видео с переводом)
+
+# Видео с переводом БЕЗ оригинального аудио
+vot-cli-live --output="." --merge-video --keep-original-audio=false "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
 ---

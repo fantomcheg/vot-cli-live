@@ -34,15 +34,19 @@ npm install -g vot-cli-live
 
 ### Usage:
 ```bash
-# Download translation with live voices (file will be named after video title)
-vot-cli-live --output="." "https://www.youtube.com/watch?v=VIDEO_ID"
+# Download audio translation only with live voices (file will be named after video title)
+vot-cli-live --output="." "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 # Result: Rick_Astley_-_Never_Gonna_Give_You_Up.mp3
 
 # Download with standard TTS
 vot-cli-live --output="." --voice-style=tts "https://www.youtube.com/watch?v=VIDEO_ID"
 
-# Download video with embedded translation (requires yt-dlp and ffmpeg)
-vot-cli-live --output="." --merge-video "https://www.youtube.com/watch?v=VIDEO_ID"
+# Download VIDEO with embedded translation (requires yt-dlp and ffmpeg)
+vot-cli-live --output="." --merge-video "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+# Result: Rick_Astley_-_Never_Gonna_Give_You_Up.mp4 (video with translation)
+
+# Video with translation WITHOUT original audio
+vot-cli-live --output="." --merge-video --keep-original-audio=false "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
 ---
