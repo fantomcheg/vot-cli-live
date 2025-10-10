@@ -107,8 +107,10 @@ npm install -g vot-cli
 
 ### Требования:
 - NodeJS 18+
+- yt-dlp (рекомендуется для автоматических названий файлов): `pip install yt-dlp` или `sudo apt install yt-dlp`
 - ffmpeg (для `--merge-video`): `sudo apt install ffmpeg`
-- yt-dlp (для `--merge-video`): `pip install yt-dlp` или `sudo apt install yt-dlp`
+
+> 💡 **Примечание:** Без yt-dlp файлы будут называться по videoId (например: `dQw4w9WgXcQ.mp3`)
 
 ## ⚙️ Установка из исходников
 
