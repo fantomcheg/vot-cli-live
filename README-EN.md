@@ -45,7 +45,7 @@ vot-cli-live --output="." --merge-video "https://www.youtube.com/watch?v=VIDEO_I
 
 ---
 
-Русская версия: [Link](https://github.com/fantomcheg/vot-cli2025/blob/main/README.md)
+Русская версия: [Link](https://github.com/fantomcheg/vot-cli-live/blob/main/README.md)
 
 A small script that allows you to download an audio translation from Yandex via the terminal.
 

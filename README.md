@@ -45,7 +45,7 @@ vot-cli-live --output="." --merge-video "https://www.youtube.com/watch?v=VIDEO_I
 
 ---
 
-English version: [Link](https://github.com/fantomcheg/vot-cli2025/blob/main/README-EN.md)
+English version: [Link](https://github.com/fantomcheg/vot-cli-live/blob/main/README-EN.md)
 
 Небольшой скрипт, позволяющий скачать аудио перевод от Яндекса через терминал.
 
