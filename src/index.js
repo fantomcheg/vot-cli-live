@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import fs from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 import chalk from "chalk";
 import parseArgs from "minimist";
@@ -19,7 +21,11 @@ import coursehunterUtils from "./utils/coursehunter.js";
 import { createVideoWithTranslation } from "./mergeVideo.js";
 import getVideoTitle from "./utils/getVideoTitle.js";
 
-const version = "1.5.0";
+// Автоматически читаем версию из package.json
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJson = JSON.parse(fs.readFileSync(join(__dirname, "../package.json"), "utf8"));
+const version = packageJson.version;
 const HELP_MESSAGE = `
 A small script that allows you to download an audio translation from Yandex via the terminal.
 
