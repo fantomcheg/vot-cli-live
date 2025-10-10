@@ -167,6 +167,6 @@ pip install yt-dlp
 
 ## 📞 Поддержка
 
-- 🐛 Issues: https://github.com/fantomcheg/vot-cli2025/issues
+- 🐛 Issues: https://github.com/fantomcheg/vot-cli-live/issues
 - ⭐ Поставь звезду если проект помог!
 - 🔄 Оригинальный репозиторий: https://github.com/FOSWLY/vot-cli

@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
 [![npm downloads](https://img.shields.io/npm/dm/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
-[![GitHub stars](https://img.shields.io/github/stars/fantomcheg/vot-cli2025)](https://github.com/fantomcheg/vot-cli2025/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/fantomcheg/vot-cli-live)](https://github.com/fantomcheg/vot-cli-live/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > ### 🔥 Fork with Yandex Live Voices Support!
@@ -111,8 +111,8 @@ npm install -g vot-cli
 2. Clone the repository:
 
 ```bash
-git clone https://github.com/fantomcheg/vot-cli2025.git
-cd vot-cli2025
+git clone https://github.com/fantomcheg/vot-cli-live.git
+cd vot-cli-live
 ```
 
 3. Install dependencies:

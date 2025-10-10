@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
 [![npm downloads](https://img.shields.io/npm/dm/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
-[![GitHub stars](https://img.shields.io/github/stars/fantomcheg/vot-cli2025)](https://github.com/fantomcheg/vot-cli2025/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/fantomcheg/vot-cli-live)](https://github.com/fantomcheg/vot-cli-live/stargazers)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > ### 🔥 Форк с поддержкой живых голосов Яндекса!
