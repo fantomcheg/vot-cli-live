@@ -29,6 +29,8 @@ English version: [Link](https://github.com/FOSWLY/vot-cli/blob/main/README-EN.md
 - `vot-cli --output=<path> --reslang=en <link>` — получить перевод аудио на английский и сохранить его по указаному пути
 - `vot-cli --output=<path> --voice-style=live <link>` — получить перевод с живыми голосами (по умолчанию)
 - `vot-cli --output=<path> --voice-style=tts <link>` — получить перевод со стандартной озвучкой TTS
+- `vot-cli --output=<path> --merge-video <link>` — скачать видео с встроенным переводом (требует yt-dlp и ffmpeg)
+- `vot-cli --output=<path> --merge-video --keep-original-audio=false <link>` — видео только с переводом (без оригинального аудио)
 - `vot-cli --subs --output=<path> --lang=en <link>` — получить английские субтитры к видео и сохранить их по указанному пути
 - `vot-cli --output="." "https://www.youtube.com/watch?v=X98VPQCE_WI" "https://www.youtube.com/watch?v=djr8j-4fS3A&t=900s"` - пример с реальными данными
 
@@ -39,6 +41,10 @@ English version: [Link](https://github.com/FOSWLY/vot-cli/blob/main/README-EN.md
 - `--lang` — установить язык исходного видео (см. [вики](https://github.com/FOSWLY/vot-cli/wiki/%5BRU%5D-Supported-langs), чтобы узнать какие языки поддерживаются)
 - `--reslang` — установить язык полученного аудио файла (см. [вики](https://github.com/FOSWLY/vot-cli/wiki/%5BRU%5D-Supported-langs), чтобы узнать какие языки поддерживаются)
 - `--voice-style` — установить тип озвучки (tts - стандартный TTS, live - живые голоса. По умолчанию: live)
+- `--merge-video` — объединить видео с аудио переводом (требует yt-dlp и ffmpeg)
+- `--keep-original-audio` — сохранить оригинальное аудио при объединении (микшировать с переводом. По умолчанию: true)
+- `--translation-volume` — установить громкость перевода (0.0-2.0. По умолчанию: 1.0)
+- `--original-volume` — установить громкость оригинала (0.0-2.0. По умолчанию: 1.0)
 - `--proxy` — установить HTTP или HTTPS прокси в формате `[<PROTOCOL>://]<USERNAME>:<PASSWORD>@<HOST>[:<port>]`
 
 ### Опции:
@@ -64,6 +70,8 @@ npm install -g vot-cli
 
 ### Требования:
 - NodeJS 18+
+- ffmpeg (для `--merge-video`): `sudo apt install ffmpeg`
+- yt-dlp (для `--merge-video`): `pip install yt-dlp` или `sudo apt install yt-dlp`
 
 ## ⚙️ Установка из исходников
 

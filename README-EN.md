@@ -39,6 +39,10 @@ A small script that allows you to download an audio translation from Yandex via 
 - `--lang` — set the source video language (look [wiki](https://github.com/FOSWLY/vot-cli/wiki/%5BEN%5D-Supported-langs), to find out which languages are supported)
 - `--reslang` — set the language of the received audio file (look [wiki](https://github.com/FOSWLY/vot-cli/wiki/%5BEN%5D-Supported-langs), to find out which languages are supported)
 - `--voice-style` — set voice style (tts - standard TTS, live - live voices. Default: live)
+- `--merge-video` — merge video with translation audio (requires yt-dlp and ffmpeg)
+- `--keep-original-audio` — keep original audio when merging (mix with translation. Default: true)
+- `--translation-volume` — set translation audio volume (0.0-2.0. Default: 1.0)
+- `--original-volume` — set original audio volume (0.0-2.0. Default: 1.0)
 - `--proxy` — set HTTP or HTTPS proxy in the format `[<PROTOCOL>://]<USERNAME>:<PASSWORD>@<HOST>[:<port>]`
 
 ### Options:
@@ -64,6 +68,8 @@ npm install -g vot-cli
 
 ### Requirements:
 - NodeJS 18+
+- ffmpeg (for `--merge-video`): `sudo apt install ffmpeg`
+- yt-dlp (for `--merge-video`): `pip install yt-dlp` or `sudo apt install yt-dlp`
 
 ## ⚙️ Installation from source
 

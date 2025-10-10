@@ -16,8 +16,9 @@ import yandexRequests from "./yandexRequests.js";
 import yandexProtobuf from "./yandexProtobuf.js";
 import parseProxy from "./proxy.js";
 import coursehunterUtils from "./utils/coursehunter.js";
+import { createVideoWithTranslation } from "./mergeVideo.js";
 
-const version = "1.4.2";
+const version = "1.5.0";
 const HELP_MESSAGE = `
 A small script that allows you to download an audio translation from Yandex via the terminal.
 
@@ -30,6 +31,10 @@ Args:
   --lang — Set the source video language
   --reslang — Set the audio track language (You can see all supported languages in the documentation. Default: ru)
   --voice-style — Set voice style (tts - standard TTS, live - live voices/живые голоса. Default: live)
+  --merge-video — Merge video with translation audio (requires yt-dlp and ffmpeg)
+  --keep-original-audio — Keep original audio when merging (mix with translation. Default: true)
+  --translation-volume — Set translation audio volume (0.0-2.0. Default: 1.0)
+  --original-volume — Set original audio volume (0.0-2.0. Default: 1.0)
   --proxy — Set proxy in format ([<PROTOCOL>://]<USERNAME>:<PASSWORD>@<HOST>[:<port>])
   --force-proxy — Don't start the transfer if the proxy could not be identified (true | false. Default: false)
 
@@ -58,6 +63,10 @@ const ARG_HELP = argv.help || argv.h;
 const ARG_VERSION = argv.version || argv.v;
 const PROXY_STRING = argv.proxy;
 let FORCE_PROXY = argv["force-proxy"] ?? false;
+const MERGE_VIDEO = argv["merge-video"] ?? false;
+const KEEP_ORIGINAL_AUDIO = argv["keep-original-audio"] ?? true;
+const TRANSLATION_VOLUME = parseFloat(argv["translation-volume"]) || 1.0;
+const ORIGINAL_VOLUME = parseFloat(argv["original-volume"]) || 1.0;
 
 if (argv["voice-style"] !== undefined) {
   const voiceStyleValue = argv["voice-style"].toLowerCase();
@@ -431,6 +440,64 @@ async function main() {
                     .catch((e) => {
                       subtask.title = `Error. Download ${taskSubTitle} failed! Reason: ${e.message}`;
                     });
+                },
+              },
+              {
+                title: `Merging video with translation (ID: ${videoId}).`,
+                exitOnError: false,
+                enabled: Boolean(OUTPUT_DIR) && Boolean(MERGE_VIDEO) && !IS_SUBS_REQ,
+                task: async (ctxSub, subtask) => {
+                  if (
+                    !(
+                      parent.translateResult?.success &&
+                      parent.translateResult?.urlOrError
+                    )
+                  ) {
+                    throw new Error(
+                      chalk.red(
+                        `Merging failed! Audio link not found`,
+                      ),
+                    );
+                  }
+
+                  const audioFilename = OUTPUT_FILE
+                    ? OUTPUT_FILE.endsWith(".mp3")
+                      ? OUTPUT_FILE
+                      : `${OUTPUT_FILE}.mp3`
+                    : `${clearFileName(videoId)}---${uuidv4()}.mp3`;
+                  const audioPath = `${OUTPUT_DIR}/${audioFilename}`;
+
+                  const videoFilename = OUTPUT_FILE
+                    ? OUTPUT_FILE.replace(".mp3", ".mp4")
+                    : `${clearFileName(videoId)}---${uuidv4()}.mp4`;
+                  const videoPath = `${OUTPUT_DIR}/${videoFilename}`;
+
+                  subtask.title = `Downloading audio for merge (ID: ${videoId})...`;
+                  await downloadFile(
+                    parent.translateResult.urlOrError,
+                    audioPath,
+                    null,
+                    null,
+                  );
+
+                  subtask.title = `Creating video with translation (ID: ${videoId})...`;
+                  await createVideoWithTranslation(
+                    parent.finalURL,
+                    audioPath,
+                    videoPath,
+                    {
+                      keepOriginalAudio: KEEP_ORIGINAL_AUDIO,
+                      audioVolume: ORIGINAL_VOLUME,
+                      translationVolume: TRANSLATION_VOLUME,
+                    },
+                  );
+
+                  // Удаляем временный аудио файл
+                  if (fs.existsSync(audioPath)) {
+                    fs.unlinkSync(audioPath);
+                  }
+
+                  subtask.title = `Video with translation created! (ID: ${videoId} as ${videoFilename})`;
                 },
               },
               {
