@@ -70,7 +70,7 @@ A small script that allows you to download an audio translation from Yandex via 
 ### Arguments:
 
 - `--output` — set the path to save the audio translation file
-- `--output-file` — set the file name to download (requires specifying a dir to download in "--output" argument)
+- `--output-file` — set the file name to download (requires "--output"). If not specified, uses YouTube video title
 - `--lang` — set the source video language (see [Wiki - Working with Languages](https://github.com/fantomcheg/vot-cli-live/wiki/Home#-работа-с-языками) for supported languages)
 - `--reslang` — set the language of the received audio file (see [Wiki - Working with Languages](https://github.com/fantomcheg/vot-cli-live/wiki/Home#-работа-с-языками) for supported languages)
 - `--voice-style` — set voice style (tts - standard TTS, live - live voices. Default: live)

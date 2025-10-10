@@ -17,6 +17,7 @@ import yandexProtobuf from "./yandexProtobuf.js";
 import parseProxy from "./proxy.js";
 import coursehunterUtils from "./utils/coursehunter.js";
 import { createVideoWithTranslation } from "./mergeVideo.js";
+import getVideoTitle from "./utils/getVideoTitle.js";
 
 const version = "1.5.0";
 const HELP_MESSAGE = `
@@ -294,6 +295,13 @@ async function main() {
                     throw new Error(`Entered unsupported link: ${finalURL}`);
                   }
                   parent.finalURL = finalURL;
+                  
+                  // Получаем название видео для имени файла
+                  try {
+                    parent.videoTitle = await getVideoTitle(finalURL);
+                  } catch (e) {
+                    parent.videoTitle = null;
+                  }
                 },
               },
               {
@@ -377,7 +385,9 @@ async function main() {
                     ? OUTPUT_FILE.endsWith(".mp3")
                       ? OUTPUT_FILE
                       : `${OUTPUT_FILE}.mp3`
-                    : `${clearFileName(videoId)}---${uuidv4()}.mp3`;
+                    : parent.videoTitle
+                      ? `${parent.videoTitle}.mp3`
+                      : `${clearFileName(videoId)}---${uuidv4()}.mp3`;
                   await downloadFile(
                     parent.translateResult.urlOrError,
                     `${OUTPUT_DIR}/${filename}`,
