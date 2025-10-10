@@ -41,7 +41,7 @@ English version: [Link](https://github.com/FOSWLY/vot-cli/blob/main/README-EN.md
 - `--lang` — установить язык исходного видео (см. [вики](https://github.com/FOSWLY/vot-cli/wiki/%5BRU%5D-Supported-langs), чтобы узнать какие языки поддерживаются)
 - `--reslang` — установить язык полученного аудио файла (см. [вики](https://github.com/FOSWLY/vot-cli/wiki/%5BRU%5D-Supported-langs), чтобы узнать какие языки поддерживаются)
 - `--voice-style` — установить тип озвучки (tts - стандартный TTS, live - живые голоса. По умолчанию: live)
-- `--merge-video` — объединить видео с аудио переводом (требует yt-dlp и ffmpeg)
+- `--merge-video` — объединить видео с аудио переводом (⚠️ экспериментально, требует yt-dlp и ffmpeg, может занять много времени)
 - `--keep-original-audio` — сохранить оригинальное аудио при объединении (микшировать с переводом. По умолчанию: true)
 - `--translation-volume` — установить громкость перевода (0.0-2.0. По умолчанию: 1.0)
 - `--original-volume` — установить громкость оригинала (0.0-2.0. По умолчанию: 1.0)
