@@ -11,8 +11,8 @@ const execAsync = promisify(exec);
  * @param {string} outputPath - путь для сохранения
  * @returns {Promise<string>} - путь к скачанному видео
  */
-async function downloadYouTubeVideo(videoUrl, outputPath) {
-  const videoPath = `${outputPath}_video.mp4`;
+async function downloadYouTubeVideo(videoUrl, outputDir) {
+  const videoPath = `${outputDir}/temp_video_${Date.now()}.mp4`;
   
   // Проверяем наличие yt-dlp
   try {
@@ -24,9 +24,20 @@ async function downloadYouTubeVideo(videoUrl, outputPath) {
   }
 
   // Скачиваем видео в лучшем качестве
-  const command = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best" -o "${videoPath}" "${videoUrl}"`;
+  const command = `yt-dlp -f "best[ext=mp4]/best" --merge-output-format mp4 -o "${videoPath}" "${videoUrl}"`;
   
-  await execAsync(command);
+  try {
+    await execAsync(command);
+  } catch (error) {
+    // Если файл скачался но с другим расширением, попробуем найти его
+    const dir = path.dirname(videoPath);
+    const files = fs.readdirSync(dir).filter(f => f.startsWith('temp_video_'));
+    if (files.length > 0) {
+      return path.join(dir, files[0]);
+    }
+    throw error;
+  }
+  
   return videoPath;
 }
 
@@ -80,12 +91,12 @@ export async function createVideoWithTranslation(
   options = {},
 ) {
   const tempDir = path.dirname(outputPath);
-  const videoPath = path.join(tempDir, `temp_video_${Date.now()}.mp4`);
+  let videoPath;
 
   try {
     // Скачиваем оригинальное видео
     console.log("Скачивание видео...");
-    await downloadYouTubeVideo(videoUrl, videoPath.replace("_video.mp4", ""));
+    videoPath = await downloadYouTubeVideo(videoUrl, tempDir);
 
     // Объединяем с переводом
     console.log("Объединение видео с переводом...");
@@ -99,7 +110,7 @@ export async function createVideoWithTranslation(
     console.log(`✅ Видео с переводом сохранено: ${outputPath}`);
   } catch (error) {
     // Очистка временных файлов при ошибке
-    if (fs.existsSync(videoPath)) {
+    if (videoPath && fs.existsSync(videoPath)) {
       fs.unlinkSync(videoPath);
     }
     throw error;

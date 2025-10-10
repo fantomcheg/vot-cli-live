@@ -51,7 +51,10 @@ let USE_LIVE_VOICES = true; // по умолчанию используем жи
 let proxyData = false;
 
 // ARG PARSER
-const argv = parseArgs(process.argv.slice(2));
+const argv = parseArgs(process.argv.slice(2), {
+  boolean: ["merge-video", "keep-original-audio", "subs", "subtitles", "subs-srt", "subtitles-srt", "help", "h", "version", "v", "force-proxy"],
+  string: ["output", "output-file", "lang", "reslang", "voice-style", "proxy", "translation-volume", "original-volume"],
+});
 
 const ARG_LINKS = argv._;
 const OUTPUT_DIR = argv.output;
@@ -63,7 +66,7 @@ const ARG_HELP = argv.help || argv.h;
 const ARG_VERSION = argv.version || argv.v;
 const PROXY_STRING = argv.proxy;
 let FORCE_PROXY = argv["force-proxy"] ?? false;
-const MERGE_VIDEO = argv["merge-video"] ?? false;
+const MERGE_VIDEO = argv["merge-video"] === true || argv["merge-video"] === "";
 const KEEP_ORIGINAL_AUDIO = argv["keep-original-audio"] ?? true;
 const TRANSLATION_VOLUME = parseFloat(argv["translation-volume"]) || 1.0;
 const ORIGINAL_VOLUME = parseFloat(argv["original-volume"]) || 1.0;
@@ -468,7 +471,7 @@ async function main() {
                   const audioPath = `${OUTPUT_DIR}/${audioFilename}`;
 
                   const videoFilename = OUTPUT_FILE
-                    ? OUTPUT_FILE.replace(".mp3", ".mp4")
+                    ? (OUTPUT_FILE.endsWith(".mp4") ? OUTPUT_FILE : `${OUTPUT_FILE}.mp4`)
                     : `${clearFileName(videoId)}---${uuidv4()}.mp4`;
                   const videoPath = `${OUTPUT_DIR}/${videoFilename}`;
 
