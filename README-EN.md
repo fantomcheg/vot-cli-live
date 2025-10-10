@@ -65,23 +65,29 @@ npm install -g vot-cli
 ### Requirements:
 - NodeJS 18+
 
-## ⚙️ Installation for development
+## ⚙️ Installation from source
 
 1. Install NodeJS 18+
-2. Download and unpack the archive from vot-cli
+2. Clone the repository:
+
+```bash
+git clone https://github.com/fantomcheg/vot-cli2025.git
+cd vot-cli2025
+```
+
 3. Install dependencies:
 
 ```bash
-npm i
+npm install --ignore-scripts
 ```
 
-4. After successful installation of the modules, run the command
+4. Install globally:
 
 ```bash
-npm link
+sudo npm link
 ```
 
-5. That's it, now you can use vot-cli in your terminal
+5. Done! Now `vot-cli-live` command is available in your terminal
 
 ## 📁 Useful links
 
