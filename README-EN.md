@@ -51,6 +51,7 @@ A small script that allows you to download an audio translation from Yandex via 
 
 ## 📖 Using
 
+> 💡 **Full documentation:** [Wiki](https://github.com/fantomcheg/vot-cli-live/wiki)  
 > 💡 **More examples:** [EXAMPLES.md](./EXAMPLES.md)
 
 ### Usage examples:

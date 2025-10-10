@@ -51,6 +51,7 @@ English version: [Link](https://github.com/fantomcheg/vot-cli2025/blob/main/READ
 
 ## 📖 Использование
 
+> 💡 **Полная документация:** [Wiki](https://github.com/fantomcheg/vot-cli-live/wiki)  
 > 💡 **Больше примеров:** [EXAMPLES.md](./EXAMPLES.md)
 
 ### Примеры использования:
