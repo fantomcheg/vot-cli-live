@@ -12,10 +12,10 @@ const VideoTranslationRequest = new protobuf.Type("VideoTranslationRequest")
   .add(new protobuf.Field("deviceId", 4, "string")) // used in mobile version
   .add(new protobuf.Field("firstRequest", 5, "bool")) // true for the first request, false for subsequent ones
   .add(new protobuf.Field("duration", 6, "double"))
-  .add(new protobuf.Field("unknown2", 7, "int32")) // 1 1
+  .add(new protobuf.Field("unknown0", 7, "int32")) // 1
   .add(new protobuf.Field("language", 8, "string")) // source language code
-  .add(new protobuf.Field("unknown3", 9, "int32")) // 0 - without translationHelp | 1 - with translationHelp (??? But it works without it)
-  .add(new protobuf.Field("unknown4", 10, "int32")) // 0 0
+  .add(new protobuf.Field("forceSourceLang", 9, "bool")) // 0 - auto detected, 1 - user set
+  .add(new protobuf.Field("unknown1", 10, "int32")) // 0
   .add(
     new protobuf.Field(
       "translationHelp",
@@ -23,11 +23,14 @@ const VideoTranslationRequest = new protobuf.Type("VideoTranslationRequest")
       "VideoTranslationHelpObject",
       "repeated",
     ),
-  ) // array for translation assistance ([0] -> {2: link to video, 1: "video_file_url"}, [1] -> {2: link to subtitles, 1: "subtitles_file_url"})
+  ) // array for translation assistance
+  .add(new protobuf.Field("wasStream", 13, "bool")) // set true if it's ended stream
   .add(new protobuf.Field("responseLanguage", 14, "string"))
-  .add(new protobuf.Field("unknown5", 15, "int32")) // 0
-  .add(new protobuf.Field("unknown6", 16, "int32")) // 1
-  .add(new protobuf.Field("unknown7", 17, "int32")); // 0
+  .add(new protobuf.Field("unknown2", 15, "int32")) // 1?
+  .add(new protobuf.Field("unknown3", 16, "int32")) // before april 2025 is 1, but now it's 2
+  .add(new protobuf.Field("bypassCache", 17, "bool")) // bypass cache
+  .add(new protobuf.Field("useLivelyVoice", 18, "bool")) // higher-quality voices (live voices)
+  .add(new protobuf.Field("videoTitle", 19, "string")); // video title
 
 const VideoSubtitlesRequest = new protobuf.Type("VideoSubtitlesRequest")
   .add(new protobuf.Field("url", 1, "string"))
@@ -105,20 +108,24 @@ export default {
     requestLang,
     responseLang,
     translationHelp,
+    useLiveVoices = true, // по умолчанию используем живые голоса
   ) {
     return root.VideoTranslationRequest.encode({
       url,
       firstRequest: true,
       duration,
-      unknown2: 1,
+      unknown0: 1,
       language: requestLang,
-      unknown3: 0,
-      unknown4: 0,
+      forceSourceLang: false,
+      unknown1: 0,
       translationHelp,
+      wasStream: false,
       responseLanguage: responseLang,
-      unknown5: 0,
-      unknown6: 1,
-      unknown7: 0,
+      unknown2: 1,
+      unknown3: 2, // after april 2025 it's 2
+      bypassCache: false,
+      useLivelyVoice: useLiveVoices, // живые голоса!
+      videoTitle: "",
     }).finish();
   },
   decodeTranslationResponse(response) {

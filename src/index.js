@@ -29,6 +29,7 @@ Args:
   --output-file — Set the file name to download (requires specifying a dir to download in "--output" argument)
   --lang — Set the source video language
   --reslang — Set the audio track language (You can see all supported languages in the documentation. Default: ru)
+  --voice-style — Set voice style (tts - standard TTS, live - live voices/живые голоса. Default: live)
   --proxy — Set proxy in format ([<PROTOCOL>://]<USERNAME>:<PASSWORD>@<HOST>[:<port>])
   --force-proxy — Don't start the transfer if the proxy could not be identified (true | false. Default: false)
 
@@ -41,6 +42,7 @@ Options:
 // LANG PAIR
 let REQUEST_LANG = "en";
 let RESPONSE_LANG = "ru";
+let USE_LIVE_VOICES = true; // по умолчанию используем живые голоса
 let proxyData = false;
 
 // ARG PARSER
@@ -56,6 +58,16 @@ const ARG_HELP = argv.help || argv.h;
 const ARG_VERSION = argv.version || argv.v;
 const PROXY_STRING = argv.proxy;
 let FORCE_PROXY = argv["force-proxy"] ?? false;
+
+if (argv["voice-style"] !== undefined) {
+  const voiceStyleValue = argv["voice-style"].toLowerCase();
+  if (voiceStyleValue === "tts" || voiceStyleValue === "live") {
+    USE_LIVE_VOICES = (voiceStyleValue === "live");
+    console.log(`Voice style is set to ${USE_LIVE_VOICES ? "live voices (живые голоса)" : "standard TTS"}`);
+  } else {
+    console.error(chalk.yellow("Invalid voice-style value. Using default (live - live voices)"));
+  }
+}
 
 if (availableLangs.includes(argv.lang)) {
   REQUEST_LANG = argv.lang;
@@ -122,6 +134,7 @@ const translate = async (finalURL, task) => {
           throw new Error(chalk.red(urlOrError));
         }
       },
+      USE_LIVE_VOICES, // передаем параметр live voices
     );
   } catch (e) {
     return {

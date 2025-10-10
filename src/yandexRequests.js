@@ -13,6 +13,7 @@ async function requestVideoTranslation(
   translationHelp,
   proxyData,
   callback,
+  useLiveVoices = true, // по умолчанию используем живые голоса
 ) {
   try {
     logger.debug("requestVideoTranslation");
@@ -23,6 +24,7 @@ async function requestVideoTranslation(
       requestLang,
       responseLang,
       translationHelp,
+      useLiveVoices,
     );
     // Send the request
     await yandexRawRequest(

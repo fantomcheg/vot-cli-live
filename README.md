@@ -14,6 +14,8 @@ English version: [Link](https://github.com/FOSWLY/vot-cli/blob/main/README-EN.md
 - `vot-cli --version` — показать версию скрипта
 - `vot-cli --output=<path> <link>` — получить перевод аудио по ссылке и сохранить его по указаному пути
 - `vot-cli --output=<path> --reslang=en <link>` — получить перевод аудио на английский и сохранить его по указаному пути
+- `vot-cli --output=<path> --voice-style=live <link>` — получить перевод с живыми голосами (по умолчанию)
+- `vot-cli --output=<path> --voice-style=tts <link>` — получить перевод со стандартной озвучкой TTS
 - `vot-cli --subs --output=<path> --lang=en <link>` — получить английские субтитры к видео и сохранить их по указанному пути
 - `vot-cli --output="." "https://www.youtube.com/watch?v=X98VPQCE_WI" "https://www.youtube.com/watch?v=djr8j-4fS3A&t=900s"` - пример с реальными данными
 
@@ -23,6 +25,7 @@ English version: [Link](https://github.com/FOSWLY/vot-cli/blob/main/README-EN.md
 - `--output-file` — установить имя файла для сохранения (требует указания пути сохранения аудио файла перевода в аргументе "--output")
 - `--lang` — установить язык исходного видео (см. [вики](https://github.com/FOSWLY/vot-cli/wiki/%5BRU%5D-Supported-langs), чтобы узнать какие языки поддерживаются)
 - `--reslang` — установить язык полученного аудио файла (см. [вики](https://github.com/FOSWLY/vot-cli/wiki/%5BRU%5D-Supported-langs), чтобы узнать какие языки поддерживаются)
+- `--voice-style` — установить тип озвучки (tts - стандартный TTS, live - живые голоса. По умолчанию: live)
 - `--proxy` — установить HTTP или HTTPS прокси в формате `[<PROTOCOL>://]<USERNAME>:<PASSWORD>@<HOST>[:<port>]`
 
 ### Опции:

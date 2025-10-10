@@ -8,6 +8,7 @@ export default async function translateVideo(
   translationHelp,
   proxyData,
   callback,
+  useLiveVoices = true, // по умолчанию используем живые голоса
 ) {
   // TODO: Use real duration (maybe)
   const duration = 341;
@@ -43,5 +44,6 @@ export default async function translateVideo(
           return;
       }
     },
+    useLiveVoices, // передаем параметр useLiveVoices
   );
 }
