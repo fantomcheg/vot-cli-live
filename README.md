@@ -1,7 +1,7 @@
 ## [FOSWLY] VOT-CLI
 
-[![npm version](https://img.shields.io/npm/v/@fantomcheg/vot-cli-live)](https://www.npmjs.com/package/@fantomcheg/vot-cli-live)
-[![npm downloads](https://img.shields.io/npm/dm/@fantomcheg/vot-cli-live)](https://www.npmjs.com/package/@fantomcheg/vot-cli-live)
+[![npm version](https://img.shields.io/npm/v/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
+[![npm downloads](https://img.shields.io/npm/dm/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
 [![GitHub stars](https://img.shields.io/github/stars/fantomcheg/vot-cli2025)](https://github.com/fantomcheg/vot-cli2025/stargazers)
 
 > **⚠️ Это форк с поддержкой живых голосов Яндекса**
