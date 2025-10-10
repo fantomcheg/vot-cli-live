@@ -1,5 +1,18 @@
 ## [FOSWLY] VOT-CLI
 
+[![npm version](https://img.shields.io/npm/v/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
+[![npm downloads](https://img.shields.io/npm/dm/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
+[![GitHub stars](https://img.shields.io/github/stars/fantomcheg/vot-cli2025)](https://github.com/fantomcheg/vot-cli2025/stargazers)
+
+> **⚠️ This is a fork with Yandex live voices support**
+> 
+> Original repository: [FOSWLY/vot-cli](https://github.com/FOSWLY/vot-cli)
+> 
+> **What's added:**
+> - ✅ Yandex live voices support (useLivelyVoice)
+> - ✅ Live voices are used by default (higher quality)
+> - ✅ CLI parameter `--voice-style` to choose voice type (live/tts)
+
 Русская версия: [Link](https://github.com/FOSWLY/vot-cli/blob/main/README.md)
 
 A small script that allows you to download an audio translation from Yandex via the terminal.
@@ -37,12 +50,20 @@ A small script that allows you to download an audio translation from Yandex via 
 
 ## 💻 Installation
 
-1. Install NodeJS 18+
-2. Install vot-cli globally:
+### From npm (recommended):
 
+**Version with live voices:**
+```bash
+npm install -g vot-cli-live
+```
+
+**Original version (without live voices):**
 ```bash
 npm install -g vot-cli
 ```
+
+### Requirements:
+- NodeJS 18+
 
 ## ⚙️ Installation for development
 
