@@ -1,6 +1,6 @@
 {
   "name": "vot-cli-live",
-  "version": "1.6.0",
+  "version": "1.6.2",
   "description": "VOT-CLI with Yandex live voices support. Fork of FOSWLY/vot-cli with useLivelyVoice feature.",
   "type": "module",
   "main": "./src/index.js",
