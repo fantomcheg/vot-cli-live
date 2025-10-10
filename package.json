@@ -33,7 +33,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "homepage": "https://github.com/FOSWLY/vot-cli/#readme",
+  "homepage": "https://github.com/fantomcheg/vot-cli-live/#readme",
   "dependencies": {
     "axios": "^1.7.2",
     "chalk": "^5.3.0",
