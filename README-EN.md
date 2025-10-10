@@ -1,19 +1,51 @@
-## [FOSWLY] VOT-CLI
+## 🎤 VOT-CLI with Live Voices
 
 [![npm version](https://img.shields.io/npm/v/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
 [![npm downloads](https://img.shields.io/npm/dm/vot-cli-live)](https://www.npmjs.com/package/vot-cli-live)
 [![GitHub stars](https://img.shields.io/github/stars/fantomcheg/vot-cli2025)](https://github.com/fantomcheg/vot-cli2025/stargazers)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **⚠️ This is a fork with Yandex live voices support**
+> ### 🔥 Fork with Yandex Live Voices Support!
 > 
-> Original repository: [FOSWLY/vot-cli](https://github.com/FOSWLY/vot-cli)
-> 
-> **What's added:**
-> - ✅ Yandex live voices support (useLivelyVoice)
-> - ✅ Live voices are used by default (higher quality)
-> - ✅ CLI parameter `--voice-style` to choose voice type (live/tts)
+> Original [FOSWLY/vot-cli](https://github.com/FOSWLY/vot-cli) only downloaded standard TTS. 
+> **This version uses Yandex live voices by default** - much more natural and higher quality voiceover!
 
-Русская версия: [Link](https://github.com/FOSWLY/vot-cli/blob/main/README.md)
+---
+
+## ✨ What's New in This Fork:
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| 🎤 **Live Voices** | Support for `useLivelyVoice` - more natural voiceover from Yandex | ✅ Working |
+| 🎚️ **Voice Type Selection** | `--voice-style` parameter (live/tts) to switch between live voices and TTS | ✅ Working |
+| 🎬 **Video Merging** | `--merge-video` parameter to create video with embedded translation | ⚠️ Experimental |
+| 🔊 **Volume Control** | `--translation-volume` and `--original-volume` parameters | ✅ Working |
+| 📝 **Updated Documentation** | Usage examples in Russian and English | ✅ Ready |
+
+---
+
+## 🚀 Quick Start
+
+### Installation:
+```bash
+npm install -g vot-cli-live
+```
+
+### Usage:
+```bash
+# Download translation with live voices (default)
+vot-cli-live --output="." "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Download with standard TTS
+vot-cli-live --output="." --voice-style=tts "https://www.youtube.com/watch?v=VIDEO_ID"
+
+# Download video with embedded translation (requires yt-dlp and ffmpeg)
+vot-cli-live --output="." --merge-video "https://www.youtube.com/watch?v=VIDEO_ID"
+```
+
+---
+
+Русская версия: [Link](https://github.com/fantomcheg/vot-cli2025/blob/main/README.md)
 
 A small script that allows you to download an audio translation from Yandex via the terminal.
 
