@@ -71,8 +71,8 @@ A small script that allows you to download an audio translation from Yandex via 
 
 - `--output` — set the path to save the audio translation file
 - `--output-file` — set the file name to download (requires specifying a dir to download in "--output" argument)
-- `--lang` — set the source video language (look [wiki](https://github.com/FOSWLY/vot-cli/wiki/%5BEN%5D-Supported-langs), to find out which languages are supported)
-- `--reslang` — set the language of the received audio file (look [wiki](https://github.com/FOSWLY/vot-cli/wiki/%5BEN%5D-Supported-langs), to find out which languages are supported)
+- `--lang` — set the source video language (see [Wiki - Working with Languages](https://github.com/fantomcheg/vot-cli-live/wiki/Home#-работа-с-языками) for supported languages)
+- `--reslang` — set the language of the received audio file (see [Wiki - Working with Languages](https://github.com/fantomcheg/vot-cli-live/wiki/Home#-работа-с-языками) for supported languages)
 - `--voice-style` — set voice style (tts - standard TTS, live - live voices. Default: live)
 - `--merge-video` — merge video with translation audio (⚠️ experimental, requires yt-dlp and ffmpeg, may take a long time)
 - `--keep-original-audio` — keep original audio when merging (mix with translation. Default: true)

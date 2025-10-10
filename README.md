@@ -73,8 +73,8 @@ English version: [Link](https://github.com/fantomcheg/vot-cli-live/blob/main/REA
 
 - `--output` — установить путь сохранения аудио файла перевода
 - `--output-file` — установить имя файла для сохранения (требует указания пути сохранения аудио файла перевода в аргументе "--output")
-- `--lang` — установить язык исходного видео (см. [вики](https://github.com/FOSWLY/vot-cli/wiki/%5BRU%5D-Supported-langs), чтобы узнать какие языки поддерживаются)
-- `--reslang` — установить язык полученного аудио файла (см. [вики](https://github.com/FOSWLY/vot-cli/wiki/%5BRU%5D-Supported-langs), чтобы узнать какие языки поддерживаются)
+- `--lang` — установить язык исходного видео (см. [Wiki - Работа с языками](https://github.com/fantomcheg/vot-cli-live/wiki/Home#-работа-с-языками), чтобы узнать какие языки поддерживаются)
+- `--reslang` — установить язык полученного аудио файла (см. [Wiki - Работа с языками](https://github.com/fantomcheg/vot-cli-live/wiki/Home#-работа-с-языками), чтобы узнать какие языки поддерживаются)
 - `--voice-style` — установить тип озвучки (tts - стандартный TTS, live - живые голоса. По умолчанию: live)
 - `--merge-video` — объединить видео с аудио переводом (⚠️ экспериментально, требует yt-dlp и ffmpeg, может занять много времени)
 - `--keep-original-audio` — сохранить оригинальное аудио при объединении (микшировать с переводом. По умолчанию: true)
@@ -114,8 +114,8 @@ npm install -g vot-cli
 2. Клонируйте репозиторий:
 
 ```bash
-git clone https://github.com/fantomcheg/vot-cli2025.git
-cd vot-cli2025
+git clone https://github.com/fantomcheg/vot-cli-live.git
+cd vot-cli-live
 ```
 
 3. Установите зависимости:
