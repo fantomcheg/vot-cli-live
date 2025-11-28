@@ -8,11 +8,13 @@ export default async function yandexRawRequest(
   headers,
   proxyData,
   callback,
+  timeout = 60000, // Таймаут по умолчанию 60 секунд
 ) {
   logger.debug("yandexRequest:", path);
   await axios({
     url: `https://${workerHost}${path}`,
     method: "post",
+    timeout: timeout, // Добавлен таймаут
     headers: {
       ...{
         Accept: "application/x-protobuf",
@@ -38,6 +40,26 @@ export default async function yandexRawRequest(
     })
     .catch((err) => {
       console.error(err);
-      callback(true, err.data);
+      const status = err.response?.status;
+      const statusText = err.response?.statusText;
+      const errorCode = err.code;
+      const baseMessage = err.message;
+      
+      let message;
+      if (errorCode === 'ECONNABORTED') {
+        message = `Yandex API request timeout (${timeout}ms exceeded)`;
+      } else if (errorCode === 'ECONNRESET') {
+        message = `Yandex API connection reset. Try using a proxy with --proxy`;
+      } else if (status !== undefined) {
+        message = `Yandex API request failed with status ${status}${
+          statusText ? ` ${statusText}` : ""
+        }`;
+      } else if (errorCode) {
+        message = `Yandex API request failed: ${errorCode}`;
+      } else {
+        message = `Yandex API request failed: ${baseMessage}`;
+      }
+      
+      callback(false, message);
     });
 }

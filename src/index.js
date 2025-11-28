@@ -82,15 +82,15 @@ if (argv["voice-style"] !== undefined) {
   const voiceStyleValue = argv["voice-style"].toLowerCase();
   if (voiceStyleValue === "tts" || voiceStyleValue === "live") {
     USE_LIVE_VOICES = (voiceStyleValue === "live");
-    console.log(`Voice style is set to ${USE_LIVE_VOICES ? "live voices (живые голоса)" : "standard TTS"}`);
+    console.log(chalk.cyan(`🎤 Voice style is set to ${USE_LIVE_VOICES ? "live voices (живые голоса) 🔥" : "standard TTS 🤖"}`));
   } else {
-    console.error(chalk.yellow("Invalid voice-style value. Using default (live - live voices)"));
+    console.error(chalk.yellow("⚠️  Invalid voice-style value. Using default (live - live voices)"));
   }
 }
 
 if (availableLangs.includes(argv.lang)) {
   REQUEST_LANG = argv.lang;
-  console.log(`Request language is set to ${REQUEST_LANG}`);
+  console.log(chalk.cyan(`🌐 Request language is set to ${chalk.bold(REQUEST_LANG.toUpperCase())}`));
 }
 
 if (
@@ -98,17 +98,23 @@ if (
   (Boolean(IS_SUBS_REQ) && argv.reslang)
 ) {
   RESPONSE_LANG = argv.reslang;
-  console.log(`Response language is set to ${RESPONSE_LANG}`);
+  console.log(chalk.cyan(`🗣️  Response language is set to ${chalk.bold(RESPONSE_LANG.toUpperCase())}`));
 }
 
 if (PROXY_STRING) {
+  console.log(chalk.cyan(`🌍 Parsing proxy configuration...`));
   proxyData = parseProxy(PROXY_STRING);
+  if (proxyData) {
+    console.log(chalk.green(`✅ Proxy configured: ${proxyData.host}:${proxyData.port || 'default'}`));
+  } else {
+    console.log(chalk.red(`❌ Failed to parse proxy configuration`));
+  }
 }
 
 if (FORCE_PROXY && !proxyData) {
   throw new Error(
     chalk.red(
-      "vot-cli operation was interrupted due to the force-proxy option",
+      "❌ vot-cli operation was interrupted due to the force-proxy option",
     ),
   );
 }
@@ -240,18 +246,38 @@ async function main() {
     if (ARG_HELP) {
       return console.log(HELP_MESSAGE);
     } else if (ARG_VERSION) {
-      return console.log(`vot-cli ${version}`);
+      return console.log(`🎬 vot-cli ${version}`);
     } else {
-      return console.error(chalk.red("No links provided"));
+      return console.error(chalk.red("❌ No links provided"));
     }
   }
 
+  // Красивый баннер при запуске
+  console.log(chalk.cyan('\n╔═══════════════════════════════════════════════════════════╗'));
+  console.log(chalk.cyan('║') + chalk.bold.white('        🎬 VOT-CLI with Live Voices 🔥                ') + chalk.cyan('║'));
+  console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════╝'));
+  console.log(chalk.gray('  Это форк продукта https://github.com/FOSWLY/vot-cli/'));
+  console.log(chalk.gray('  Вся слава Илье @ToilOfficial 🙏\n'));
+  
+  console.log(chalk.gray(`📦 Version: ${version}`));
+  console.log(chalk.gray(`🎯 Videos to process: ${ARG_LINKS.length}`));
+  if (MERGE_VIDEO) {
+    console.log(chalk.yellow(`🎬 Video merge mode: ${chalk.bold('ENABLED')}`));
+    console.log(chalk.gray(`   ├─ Original volume: ${ORIGINAL_VOLUME * 100}%`));
+    console.log(chalk.gray(`   └─ Translation volume: ${TRANSLATION_VOLUME * 100}%`));
+  }
+  console.log('');
+
   if (Boolean(OUTPUT_DIR) && !fs.existsSync(OUTPUT_DIR)) {
     try {
+      console.log(chalk.cyan(`📁 Creating output directory: ${OUTPUT_DIR}`));
       fs.mkdirSync(OUTPUT_DIR);
+      console.log(chalk.green(`✅ Directory created successfully\n`));
     } catch {
-      throw new Error("Invalid output directory");
+      throw new Error(chalk.red("❌ Invalid output directory"));
     }
+  } else if (Boolean(OUTPUT_DIR)) {
+    console.log(chalk.green(`✅ Output directory exists: ${OUTPUT_DIR}\n`));
   }
 
   for (const url of ARG_LINKS) {
@@ -291,7 +317,7 @@ async function main() {
           task.newListr(
             (parent) => [
               {
-                title: `Forming a link to the video`,
+                title: `🔗 Forming a link to the video`,
                 task: async () => {
                   const finalURL =
                     videoId.startsWith("https://") || service.host === "custom"
@@ -301,17 +327,23 @@ async function main() {
                     throw new Error(`Entered unsupported link: ${finalURL}`);
                   }
                   parent.finalURL = finalURL;
+                  console.log(chalk.gray(`   └─ URL: ${finalURL}`));
                   
                   // Получаем название видео для имени файла
                   try {
+                    console.log(chalk.cyan(`   └─ 📺 Fetching video title...`));
                     parent.videoTitle = await getVideoTitle(finalURL);
+                    if (parent.videoTitle) {
+                      console.log(chalk.green(`   └─ ✅ Title: "${parent.videoTitle}"`));
+                    }
                   } catch (e) {
+                    console.log(chalk.yellow(`   └─ ⚠️  Could not fetch title, using video ID`));
                     parent.videoTitle = null;
                   }
                 },
               },
               {
-                title: `Translating (ID: ${videoId}).`,
+                title: `🎤 Translating (ID: ${videoId}) with ${USE_LIVE_VOICES ? 'live voices 🔥' : 'TTS 🤖'}`,
                 enabled: !IS_SUBS_REQ,
                 exitOnError: false,
                 task: async (ctxSub, subtask) => {
@@ -319,25 +351,47 @@ async function main() {
                   await new Promise(async (resolve, reject) => {
                     try {
                       let result;
+                      const MAX_RETRIES = 10; // Максимум 10 попыток (5 минут)
+                      const RETRY_INTERVAL = 30000; // 30 секунд между попытками
+                      let retryCount = 0;
+
+                      console.log(chalk.cyan(`   └─ 📡 Requesting translation from Yandex API...`));
                       result = await translate(parent.finalURL, subtask);
                       // console.log("transalting", result)
                       if (typeof result !== "object") {
-                        await new Promise(async (resolve) => {
+                        console.log(chalk.yellow(`   └─ ⏳ Translation is being prepared, waiting...`));
+                        await new Promise(async (resolve, reject) => {
                           const intervalId = setInterval(async () => {
+                            retryCount++;
+                            if (retryCount > MAX_RETRIES) {
+                              clearInterval(intervalId);
+                              const errorMsg = `Translation timeout after ${MAX_RETRIES} attempts (${(MAX_RETRIES * RETRY_INTERVAL) / 60000} minutes). Try again later.`;
+                              subtask.title = `❌ ${errorMsg}`;
+                              reject(new Error(errorMsg));
+                              return;
+                            }
+                            
+                            subtask.title = `🎤 Translating (ID: ${videoId}) - attempt ${retryCount}/${MAX_RETRIES} ⏰`;
+                            console.log(chalk.gray(`   └─ ⏳ Retry ${retryCount}/${MAX_RETRIES} (waiting ${RETRY_INTERVAL / 1000}s)...`));
                             // console.log("interval...", result)
                             result = await translate(parent.finalURL, subtask);
                             if (typeof result === "object") {
                               // console.log("finished", parent.translateResult)
                               clearInterval(intervalId);
+                              console.log(chalk.green(`   └─ ✅ Translation ready!`));
                               resolve(result);
                             }
-                          }, 30000);
+                          }, RETRY_INTERVAL);
                         });
+                      } else {
+                        console.log(chalk.green(`   └─ ✅ Translation received instantly (cached)`));
                       }
                       // console.log("translated", result)
                       parent.translateResult = result;
                       if (!result.success) {
-                        subtask.title = result.urlOrError;
+                        subtask.title = `❌ ${result.urlOrError}`;
+                      } else {
+                        subtask.title = `✅ Translated successfully with ${USE_LIVE_VOICES ? 'live voices 🔥' : 'TTS 🤖'}`;
                       }
                       resolve(result);
                     } catch (e) {
@@ -367,7 +421,7 @@ async function main() {
                 },
               },
               {
-                title: `Downloading (ID: ${videoId}).`,
+                title: `📥 Downloading audio translation (ID: ${videoId})`,
                 exitOnError: false,
                 enabled: Boolean(OUTPUT_DIR) && !IS_SUBS_REQ,
                 task: async (ctxSub, subtask) => {
@@ -394,6 +448,10 @@ async function main() {
                     : parent.videoTitle
                       ? `${parent.videoTitle}.mp3`
                       : `${clearFileName(videoId)}---${uuidv4()}.mp3`;
+                  
+                  console.log(chalk.cyan(`   └─ 💾 Saving as: ${chalk.bold(filename)}`));
+                  console.log(chalk.gray(`   └─ 🔗 Source: ${parent.translateResult.urlOrError.substring(0, 60)}...`));
+                  
                   await downloadFile(
                     parent.translateResult.urlOrError,
                     `${OUTPUT_DIR}/${filename}`,
@@ -401,10 +459,13 @@ async function main() {
                     `(ID: ${videoId} as ${filename})`,
                   )
                     .then(() => {
-                      subtask.title = `Download ${taskSubTitle} completed!`;
+                      const fileSize = fs.statSync(`${OUTPUT_DIR}/${filename}`).size;
+                      const fileSizeMB = (fileSize / 1024 / 1024).toFixed(2);
+                      subtask.title = `✅ Audio downloaded! (${fileSizeMB} MB)`;
+                      console.log(chalk.green(`   └─ ✅ File size: ${fileSizeMB} MB`));
                     })
                     .catch((e) => {
-                      subtask.title = `Error. Download ${taskSubTitle} failed! Reason: ${e.message}`;
+                      subtask.title = `❌ Error. Download ${taskSubTitle} failed! Reason: ${e.message}`;
                     });
                 },
               },
@@ -462,7 +523,7 @@ async function main() {
                 },
               },
               {
-                title: `Merging video with translation (ID: ${videoId}).`,
+                title: `🎬 Merging video with translation (ID: ${videoId})`,
                 exitOnError: false,
                 enabled: Boolean(OUTPUT_DIR) && Boolean(MERGE_VIDEO) && !IS_SUBS_REQ,
                 task: async (ctxSub, subtask) => {
@@ -479,6 +540,10 @@ async function main() {
                     );
                   }
 
+                  console.log(chalk.cyan(`   └─ 🎥 Starting video merge process...`));
+                  console.log(chalk.gray(`      ├─ Original volume: ${ORIGINAL_VOLUME * 100}%`));
+                  console.log(chalk.gray(`      └─ Translation volume: ${TRANSLATION_VOLUME * 100}%`));
+
                   const audioFilename = OUTPUT_FILE
                     ? OUTPUT_FILE.endsWith(".mp3")
                       ? OUTPUT_FILE
@@ -488,18 +553,27 @@ async function main() {
 
                   const videoFilename = OUTPUT_FILE
                     ? (OUTPUT_FILE.endsWith(".mp4") ? OUTPUT_FILE : `${OUTPUT_FILE}.mp4`)
-                    : `${clearFileName(videoId)}---${uuidv4()}.mp4`;
+                    : parent.videoTitle
+                      ? `${parent.videoTitle}.mp4`
+                      : `${clearFileName(videoId)}---${uuidv4()}.mp4`;
                   const videoPath = `${OUTPUT_DIR}/${videoFilename}`;
 
-                  subtask.title = `Downloading audio for merge (ID: ${videoId})...`;
+                  subtask.title = `📥 Downloading audio for merge...`;
+                  console.log(chalk.cyan(`   └─ 📥 Step 1/3: Downloading translation audio...`));
                   await downloadFile(
                     parent.translateResult.urlOrError,
                     audioPath,
                     null,
                     null,
                   );
+                  const audioSize = (fs.statSync(audioPath).size / 1024 / 1024).toFixed(2);
+                  console.log(chalk.green(`      └─ ✅ Audio downloaded (${audioSize} MB)`));
 
-                  subtask.title = `Creating video with translation (ID: ${videoId})...`;
+                  subtask.title = `🎬 Creating video with translation...`;
+                  console.log(chalk.cyan(`   └─ 🎬 Step 2/3: Merging video with translation...`));
+                  console.log(chalk.gray(`      ├─ This may take several minutes...`));
+                  console.log(chalk.gray(`      └─ Video: ${videoFilename}`));
+                  
                   await createVideoWithTranslation(
                     parent.finalURL,
                     audioPath,
@@ -508,15 +582,23 @@ async function main() {
                       keepOriginalAudio: KEEP_ORIGINAL_AUDIO,
                       audioVolume: ORIGINAL_VOLUME,
                       translationVolume: TRANSLATION_VOLUME,
+                      ...(proxyData?.proxyUrl
+                        ? { proxyUrl: proxyData.proxyUrl }
+                        : {}),
                     },
                   );
 
                   // Удаляем временный аудио файл
+                  console.log(chalk.cyan(`   └─ 🧹 Step 3/3: Cleaning up temporary files...`));
                   if (fs.existsSync(audioPath)) {
                     fs.unlinkSync(audioPath);
+                    console.log(chalk.gray(`      └─ ✅ Temporary audio file removed`));
                   }
 
-                  subtask.title = `Video with translation created! (ID: ${videoId} as ${videoFilename})`;
+                  const videoSize = (fs.statSync(videoPath).size / 1024 / 1024).toFixed(2);
+                  subtask.title = `✅ Video created! (${videoSize} MB) - ${videoFilename}`;
+                  console.log(chalk.green(`   └─ ✅ Final video size: ${videoSize} MB`));
+                  console.log(chalk.green(`   └─ 📁 Saved to: ${videoPath}`));
                 },
               },
               {
@@ -540,8 +622,26 @@ async function main() {
 
   try {
     await tasks.run();
+    
+    // Красивый финальный баннер
+    console.log('');
+    console.log(chalk.green('╔═══════════════════════════════════════════════════════════╗'));
+    console.log(chalk.green('║') + chalk.bold.white('            🎉 ALL TASKS COMPLETED! 🎉                 ') + chalk.green('║'));
+    console.log(chalk.green('╚═══════════════════════════════════════════════════════════╝'));
+    console.log('');
+    console.log(chalk.cyan(`✅ Successfully processed ${ARG_LINKS.length} video(s)`));
+    if (OUTPUT_DIR) {
+      console.log(chalk.cyan(`📁 Output directory: ${OUTPUT_DIR}`));
+    }
+    console.log('');
   } catch (e) {
+    console.error('');
+    console.error(chalk.red('╔═══════════════════════════════════════════════════════════╗'));
+    console.error(chalk.red('║') + chalk.bold.white('                ❌ ERROR OCCURRED ❌                   ') + chalk.red('║'));
+    console.error(chalk.red('╚═══════════════════════════════════════════════════════════╝'));
+    console.error('');
     console.error(e);
+    console.error('');
   }
 }
 

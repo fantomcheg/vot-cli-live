@@ -1,5 +1,6 @@
 import yandexRequests from "./yandexRequests.js";
 import yandexProtobuf from "./yandexProtobuf.js";
+import getVideoDuration from "./utils/getVideoDuration.js";
 
 export default async function translateVideo(
   url,
@@ -10,8 +11,9 @@ export default async function translateVideo(
   callback,
   useLiveVoices = true, // по умолчанию используем живые голоса
 ) {
-  // TODO: Use real duration (maybe)
-  const duration = 341;
+  // Получаем реальную длительность видео
+  const duration = await getVideoDuration(url, proxyData);
+  
   await yandexRequests.requestVideoTranslation(
     url,
     duration,
@@ -21,7 +23,26 @@ export default async function translateVideo(
     proxyData,
     (success, response) => {
       if (!success) {
-        callback(false, "Failed to request video translation");
+        let errorMessage = "Failed to request video translation";
+        if (typeof response === "string" && response.trim()) {
+          errorMessage = response.trim();
+        } else if (
+          typeof response === "object" &&
+          response !== null &&
+          typeof response.message === "string" &&
+          response.message.trim()
+        ) {
+          errorMessage = response.message.trim();
+        } else if (
+          typeof Buffer !== "undefined" &&
+          Buffer.isBuffer(response)
+        ) {
+          const bufferText = response.toString("utf8").trim();
+          if (bufferText) {
+            errorMessage = bufferText;
+          }
+        }
+        callback(false, errorMessage);
         return;
       }
 
