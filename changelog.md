@@ -1,4 +1,4 @@
-# 1.6.3 (2025-11-28 - Bug Fixes & UI Improvements)
+# 1.7.0 (2025-11-28 - Major Update: Bug Fixes & Beautiful UI)
 
 ## 🐛 Bug Fixes
 
