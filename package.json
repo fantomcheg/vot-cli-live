@@ -9,8 +9,7 @@
     "start": "node src/index.js",
     "lint": "npx eslint .",
     "lint-fix": "npx eslint . --fix",
-    "format": "prettier --write --ignore-unknown \"src/**/*.{js,ts,json}\"",
-    "prepare": "husky"
+    "format": "prettier --write --ignore-unknown \"src/**/*.{js,ts,json}\""
   },
   "repository": {
     "type": "git",
