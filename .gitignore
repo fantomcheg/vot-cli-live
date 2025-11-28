@@ -1,6 +1,8 @@
 test/vimeo/*
 test/youtube/*
 test-media
+test/*.mp3
+test/*.mp4
 
 .vscode
 .pytest_cache
