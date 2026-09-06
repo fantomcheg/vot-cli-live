@@ -1,3 +1,22 @@
+# 1.8.0 (2026-09-06 - Long Videos Support + Yandex Auth)
+
+## New Features
+
+- **Long videos support (1+ hours)**: implemented the Yandex `AUDIO_REQUESTED` protocol — when Yandex can't fetch the audio itself, vot-cli-live now downloads the audio track via yt-dlp and uploads it to Yandex in ~5 MB chunks (same as the VOT browser extension)
+- **PART_CONTENT status handling**: long videos are translated in parts; the CLI now waits for the full translation instead of failing with "Unknown translation status"
+- **SESSION_REQUIRED status handling**: new `--api-token` argument (or `VOT_API_TOKEN` env variable) for videos that require Yandex ID authorization; automatic fallback from live voices to TTS
+- **Server-driven waiting**: polling now follows the `remainingTime` hints from Yandex (up to 90 minutes) instead of fixed 10s/30s intervals with a 5-minute cap
+
+## Fixes / Internal
+
+- Added `translationId`, `shouldRetry`, `isLivelyVoice` fields to the translation response protobuf schema
+- Added protobuf messages for audio upload (`VideoTranslationAudioRequest/Response`, `ChunkAudioObject`, `PartialAudioBufferObject`)
+- `yandexRawRequest` now supports PUT method and promise-style usage
+- New module `src/audioUploader.js` (yt-dlp audio download + chunked upload)
+- Status 7 is no longer misreported as "Translation not available for this video"
+
+---
+
 # 1.7.5 (2024-12-17 - Quiet & JSON Output Modes + Translation Polling)
 
 ## ✨ New Features

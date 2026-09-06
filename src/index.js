@@ -47,11 +47,15 @@ Args:
   --force-live-voices — Try live voices even for unsupported platforms (may fail. Default: false)
   --merge-video — Merge video with translation audio (requires yt-dlp and ffmpeg)
   --keep-original-audio — Keep original audio when merging (mix with translation. Default: true)
+  --separate-tracks — Don't mix: put translation and original as separate audio tracks
+                      (switchable in the player. Requires --merge-video. Default: false)
   --normalize-audio — Normalize audio levels for consistent volume (uses dynaudnorm. Default: true)
   --translation-volume — Set translation audio volume (0.0-2.0. Default: 1.0)
   --original-volume — Set original audio volume (0.0-2.0. Default: 1.0)
   --proxy — Set proxy in format ([<PROTOCOL>://]<USERNAME>:<PASSWORD>@<HOST>[:<port>])
   --force-proxy — Don't start the transfer if the proxy could not be identified (true | false. Default: false)
+  --api-token — Yandex OAuth token for videos that require authorization (SESSION_REQUIRED).
+                Can also be set via the VOT_API_TOKEN environment variable
   --quiet — Minimal output mode: only audio URL to stdout, errors to stderr (for scripting)
   --json — JSON output mode: structured data for programmatic processing
 
@@ -69,8 +73,8 @@ let proxyData = false;
 
 // ARG PARSER
 const argv = parseArgs(process.argv.slice(2), {
-  boolean: ["merge-video", "keep-original-audio", "normalize-audio", "force-live-voices", "subs", "subtitles", "subs-srt", "subtitles-srt", "help", "h", "version", "v", "force-proxy", "quiet", "json"],
-  string: ["output", "output-file", "lang", "reslang", "voice-style", "proxy", "translation-volume", "original-volume"],
+  boolean: ["merge-video", "keep-original-audio", "normalize-audio", "separate-tracks", "force-live-voices", "subs", "subtitles", "subs-srt", "subtitles-srt", "help", "h", "version", "v", "force-proxy", "quiet", "json"],
+  string: ["output", "output-file", "lang", "reslang", "voice-style", "proxy", "translation-volume", "original-volume", "api-token"],
 });
 
 const ARG_LINKS = argv._;
@@ -85,12 +89,14 @@ const PROXY_STRING = argv.proxy;
 let FORCE_PROXY = argv["force-proxy"] ?? false;
 const MERGE_VIDEO = argv["merge-video"] === true || argv["merge-video"] === "";
 const KEEP_ORIGINAL_AUDIO = argv["keep-original-audio"] ?? true;
+const SEPARATE_TRACKS = argv["separate-tracks"] ?? false;
 const NORMALIZE_AUDIO = argv["normalize-audio"] ?? true;
 const FORCE_LIVE_VOICES = argv["force-live-voices"] ?? false;
 const TRANSLATION_VOLUME = parseFloat(argv["translation-volume"]) || 1.0;
 const ORIGINAL_VOLUME = parseFloat(argv["original-volume"]) || 1.0;
 const QUIET_MODE = argv.quiet ?? false;
 const JSON_MODE = argv.json ?? false;
+const API_TOKEN = argv["api-token"] || process.env.VOT_API_TOKEN || null;
 
 // Set environment variable for child modules
 if (QUIET_MODE || JSON_MODE) {
@@ -162,100 +168,76 @@ if (FORCE_PROXY && !proxyData) {
   );
 }
 
+if (API_TOKEN) {
+  log(chalk.cyan(`🔑 Yandex OAuth token is set (used when Yandex requires authorization)`));
+}
+
 // TASKS - renderer будет установлен позже в зависимости от режима
 let tasks;
 
 const translate = async (finalURL, task, useLiveVoices = USE_LIVE_VOICES) => {
-  const MAX_RETRIES = 30; // максимум 30 попыток (5 минут при интервале 10 сек)
-  const RETRY_INTERVAL = 10000; // 10 секунд между попытками
-  let attempt = 0;
-  
-  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+  // Весь цикл ожидания (WAITING/PART_CONTENT/AUDIO_REQUESTED/SESSION_REQUIRED)
+  // выполняется внутри translateVideo, которая следует интервалам remainingTime
+  // от Яндекса и ждёт до 90 минут — этого хватает и для длинных видео.
+  let translateData;
 
-  while (attempt < MAX_RETRIES) {
-    let translateData;
-    let needsRetry = false;
-
-    try {
-      await translateVideo(
-        finalURL,
-        REQUEST_LANG,
-        RESPONSE_LANG,
-        null,
-        proxyData,
-        (success, urlOrError) => {
-          if (success) {
-            if (!urlOrError) {
-              translateData = {
-                success: false,
-                urlOrError: "The response doesn't contain a download link",
-              };
-              return;
-            }
-
-            task.title = "Video translated successfully.";
-            if (!QUIET_MODE && !JSON_MODE) {
-              console.info(`Audio Link (${finalURL}): "${chalk.gray(urlOrError)}"`);
-            }
+  try {
+    await translateVideo(
+      finalURL,
+      REQUEST_LANG,
+      RESPONSE_LANG,
+      null,
+      proxyData,
+      (success, urlOrError) => {
+        if (success) {
+          if (!urlOrError) {
             translateData = {
-              success,
-              urlOrError,
+              success: false,
+              urlOrError: "The response doesn't contain a download link",
             };
-
             return;
           }
 
-          if (urlOrError === "The translation will take a few minutes") {
-            needsRetry = true;
-            attempt++;
-            const elapsed = Math.floor((attempt * RETRY_INTERVAL) / 1000);
-            task.title = `⏳ Translation in progress... (${elapsed}s elapsed, attempt ${attempt}/${MAX_RETRIES})`;
-            translateData = {
-              success: false,
-              urlOrError: urlOrError,
-              needsRetry: true,
-            };
-          } else {
-            translateData = {
-              success: false,
-              urlOrError: urlOrError || "Translation failed",
-            };
+          task.title = "Video translated successfully.";
+          if (!QUIET_MODE && !JSON_MODE) {
+            console.info(`Audio Link (${finalURL}): "${chalk.gray(urlOrError)}"`);
+          }
+          translateData = {
+            success,
+            urlOrError,
+          };
+          return;
+        }
+
+        translateData = {
+          success: false,
+          urlOrError: urlOrError || "Translation failed",
+        };
+      },
+      useLiveVoices,
+      {
+        apiToken: API_TOKEN,
+        onProgress: (message) => {
+          task.title = `⏳ ${message}`;
+          if (!QUIET_MODE && !JSON_MODE) {
+            console.log(chalk.gray(`   └─ ⏳ ${message}`));
           }
         },
-        useLiveVoices, // передаем параметр live voices
-      );
-    } catch (e) {
-      return {
-        success: false,
-        urlOrError: e.message,
-      };
-    }
-
-    // Если получили успешный результат или ошибку (не требующую повтора)
-    if (translateData && !needsRetry) {
-      return translateData;
-    }
-
-    // Если нужен повтор и не достигли лимита попыток
-    if (needsRetry && attempt < MAX_RETRIES) {
-      task.title = `⏳ Waiting ${RETRY_INTERVAL / 1000}s before next attempt...`;
-      await sleep(RETRY_INTERVAL);
-      continue;
-    }
-
-    // Если достигли лимита попыток
-    if (attempt >= MAX_RETRIES) {
-      return {
-        success: false,
-        urlOrError: "Translation timeout: exceeded maximum wait time (5 minutes)",
-      };
-    }
+      },
+    );
+  } catch (e) {
+    return {
+      success: false,
+      urlOrError: e.message,
+    };
   }
 
-  return {
-    success: false,
-    urlOrError: "Translation failed: no response from Yandex API",
-  };
+  return (
+    translateData ?? {
+      success: false,
+      urlOrError: "Translation failed: no response from Yandex API",
+    }
+  );
 };
 
 const fetchSubtitles = async (finalURL, task) => {
@@ -358,9 +340,13 @@ async function main() {
     console.log(chalk.gray(`🎯 Videos to process: ${ARG_LINKS.length}`));
     if (MERGE_VIDEO) {
       console.log(chalk.yellow(`🎬 Video merge mode: ${chalk.bold('ENABLED')}`));
-      console.log(chalk.gray(`   ├─ Original volume: ${ORIGINAL_VOLUME * 100}%`));
-      console.log(chalk.gray(`   ├─ Translation volume: ${TRANSLATION_VOLUME * 100}%`));
-      console.log(chalk.gray(`   └─ Audio normalization: ${NORMALIZE_AUDIO ? chalk.green('ON') + ' 🎚️' : chalk.yellow('OFF')}`));
+      if (SEPARATE_TRACKS) {
+        console.log(chalk.gray(`   ├─ Audio tracks: translation + original (separate, switchable in player)`));
+      } else {
+        console.log(chalk.gray(`   ├─ Original volume: ${ORIGINAL_VOLUME * 100}%`));
+        console.log(chalk.gray(`   ├─ Translation volume: ${TRANSLATION_VOLUME * 100}%`));
+      }
+      console.log(chalk.gray(`   └─ Audio normalization: ${NORMALIZE_AUDIO && !SEPARATE_TRACKS ? chalk.green('ON') + ' 🎚️' : chalk.yellow('OFF')}`));
     }
     console.log('');
   }
@@ -474,14 +460,9 @@ async function main() {
                 enabled: !IS_SUBS_REQ,
                 exitOnError: false,
                 task: async (ctxSub, subtask) => {
-                  // ! TODO: НЕ РАБОТАЕТ ЕСЛИ ВИДЕО НЕ ИМЕЕТ ПЕРЕВОДА
                   await new Promise(async (resolve, reject) => {
                     try {
                       let result;
-                      const MAX_RETRIES = 10; // Максимум 10 попыток (5 минут)
-                      const RETRY_INTERVAL = 30000; // 30 секунд между попытками
-                      let retryCount = 0;
-                      
                       const voiceType = parent.useLiveVoices ? 'live voices 🔥' : 'TTS 🤖';
                       subtask.title = `🎤 Translating (ID: ${videoId}) with ${voiceType}`;
 
@@ -489,7 +470,7 @@ async function main() {
                         console.log(chalk.cyan(`   └─ 📡 Requesting translation from Yandex API...`));
                       }
                       result = await translate(parent.finalURL, subtask, parent.useLiveVoices);
-                      
+
                       // Проверяем нужен ли fallback на TTS
                       if (!result.success && parent.shouldFallbackToTTS && parent.useLiveVoices) {
                         if (!QUIET_MODE && !JSON_MODE) {
@@ -499,45 +480,7 @@ async function main() {
                         subtask.title = `🎤 Translating (ID: ${videoId}) with TTS 🤖 (fallback)`;
                         result = await translate(parent.finalURL, subtask, false);
                       }
-                      
-                      // console.log("transalting", result)
-                      if (typeof result !== "object") {
-                        if (!QUIET_MODE && !JSON_MODE) {
-                          console.log(chalk.yellow(`   └─ ⏳ Translation is being prepared, waiting...`));
-                        }
-                        await new Promise(async (resolve, reject) => {
-                          const intervalId = setInterval(async () => {
-                            retryCount++;
-                            if (retryCount > MAX_RETRIES) {
-                              clearInterval(intervalId);
-                              const errorMsg = `Translation timeout after ${MAX_RETRIES} attempts (${(MAX_RETRIES * RETRY_INTERVAL) / 60000} minutes). Try again later.`;
-                              subtask.title = `❌ ${errorMsg}`;
-                              reject(new Error(errorMsg));
-                              return;
-                            }
-                            
-                            subtask.title = `🎤 Translating (ID: ${videoId}) - attempt ${retryCount}/${MAX_RETRIES} ⏰`;
-                            if (!QUIET_MODE && !JSON_MODE) {
-                              console.log(chalk.gray(`   └─ ⏳ Retry ${retryCount}/${MAX_RETRIES} (waiting ${RETRY_INTERVAL / 1000}s)...`));
-                            }
-                            // console.log("interval...", result)
-                            result = await translate(parent.finalURL, subtask, parent.useLiveVoices);
-                            if (typeof result === "object") {
-                              // console.log("finished", parent.translateResult)
-                              clearInterval(intervalId);
-                              if (!QUIET_MODE && !JSON_MODE) {
-                                console.log(chalk.green(`   └─ ✅ Translation ready!`));
-                              }
-                              resolve(result);
-                            }
-                          }, RETRY_INTERVAL);
-                        });
-                      } else {
-                        if (!QUIET_MODE && !JSON_MODE) {
-                          console.log(chalk.green(`   └─ ✅ Translation received instantly (cached)`));
-                        }
-                      }
-                      // console.log("translated", result)
+
                       parent.translateResult = result;
                       if (!result.success) {
                         subtask.title = `❌ ${result.urlOrError}`;
@@ -744,6 +687,7 @@ async function main() {
                     videoPath,
                     {
                       keepOriginalAudio: KEEP_ORIGINAL_AUDIO,
+                      separateTracks: SEPARATE_TRACKS,
                       audioVolume: ORIGINAL_VOLUME,
                       translationVolume: TRANSLATION_VOLUME,
                       normalizeAudio: NORMALIZE_AUDIO,

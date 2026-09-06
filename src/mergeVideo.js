@@ -29,10 +29,14 @@ async function downloadYouTubeVideo(videoUrl, outputDir, proxyUrl) {
     );
   }
 
-  // Скачиваем видео в лучшем качестве
+  // Скачиваем видео в лучшем качестве.
+  // YouTube всё чаще отдаёт только раздельные потоки (SABR): video-only + audio-only,
+  // поэтому combined-формат "best[ext=mp4]/best" часто недоступен
+  // ("Requested format is not available"). Берём bestvideo+bestaudio —
+  // yt-dlp сам склеит их через ffmpeg в mp4 (--merge-output-format).
   const commandParts = [
     "yt-dlp",
-    `-f ${JSON.stringify("best[ext=mp4]/best")}`,
+    `-f ${JSON.stringify("bv*+ba/b")}`,
     "--merge-output-format mp4",
     `-o ${JSON.stringify(videoPath)}`,
   ];
@@ -86,6 +90,7 @@ async function mergeVideoWithAudio(videoPath, audioPath, outputPath, options = {
     audioVolume = 1.0,
     translationVolume = 1.0,
     normalizeAudio = true,
+    separateTracks = false,
   } = options;
 
   // Проверяем наличие ffmpeg
@@ -97,7 +102,18 @@ async function mergeVideoWithAudio(videoPath, audioPath, outputPath, options = {
 
   let command;
 
-  if (keepOriginalAudio) {
+  if (separateTracks) {
+    // Две отдельные аудиодорожки: перевод (по умолчанию) + оригинал.
+    // Дорожку можно переключить в плеере. Оригинал не микшируется.
+    // "-map 0:a:0?" — опционально: у видео может не быть аудио.
+    command =
+      `ffmpeg -i "${videoPath}" -i "${audioPath}" ` +
+      `-map 0:v:0 -map 1:a:0 -map 0:a:0? ` +
+      `-c:v copy -c:a aac -b:a 192k ` +
+      `-metadata:s:a:0 title="Translation" -metadata:s:a:1 title="Original" ` +
+      `-disposition:a:0 default -disposition:a:1 0 ` +
+      `-y "${outputPath}"`;
+  } else if (keepOriginalAudio) {
     // Улучшенный профиль микширования с weights и dynaudnorm
     // Используем weights вместо volume для более корректного микширования
     const weight1 = audioVolume;          // вес оригинала (0.0-2.0)
