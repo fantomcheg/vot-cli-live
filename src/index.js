@@ -22,8 +22,12 @@ import yandexRequests from "./yandexRequests.js";
 import yandexProtobuf from "./yandexProtobuf.js";
 import parseProxy from "./proxy.js";
 import coursehunterUtils from "./utils/coursehunter.js";
-import { createVideoWithTranslation } from "./mergeVideo.js";
+import {
+  createVideoWithTranslation,
+  createVideoWithAllAudioTracks,
+} from "./mergeVideo.js";
 import getVideoTitle from "./utils/getVideoTitle.js";
+import youtubeInfo from "./youtubeInfo.js";
 
 // Автоматически читаем версию из package.json
 const __filename = fileURLToPath(import.meta.url);
@@ -46,9 +50,23 @@ Args:
                   For other platforms (VK, OK.ru), TTS is used automatically
   --force-live-voices — Try live voices even for unsupported platforms (may fail. Default: false)
   --merge-video — Merge video with translation audio (requires yt-dlp and ffmpeg)
+  --ru — RU preset (implies --merge-video): multi-track container where the default track
+         is the Yandex RU translation mixed over the original, plus the pure Yandex RU track,
+         the original audio and the YouTube RU auto-dub (if available). Also downloads
+         Russian auto-generated subtitles and embeds chapters. Equivalent to:
+         --merge-video --dub-langs="ru" --yt-auto-subs --sub-langs="ru"
   --keep-original-audio — Keep original audio when merging (mix with translation. Default: true)
   --separate-tracks — Don't mix: put translation and original as separate audio tracks
                       (switchable in the player. Requires --merge-video. Default: false)
+  --all-dubs — With --merge-video: also mux ALL YouTube auto-dub audio tracks into the container
+               (plus Yandex translation track and a mix track). See also --dub-langs
+  --dub-langs — Comma-separated YouTube auto-dub languages to add (e.g. "ru,de").
+                Separate from --reslang. Requires --merge-video. Example: --dub-langs="ru,es"
+  --chapters — Embed YouTube chapters into the output video (true | false. Default: true)
+  --yt-subs — Download user-uploaded YouTube subtitles (langs from --sub-langs)
+  --yt-auto-subs — Download auto-generated YouTube subtitles (langs from --sub-langs)
+  --sub-langs — Comma-separated languages for --yt-subs/--yt-auto-subs (default: same as --reslang)
+                (Yandex subtitles are downloaded via --subs and use --reslang as before)
   --normalize-audio — Normalize audio levels for consistent volume (uses dynaudnorm. Default: true)
   --translation-volume — Set translation audio volume (0.0-2.0. Default: 1.0)
   --original-volume — Set original audio volume (0.0-2.0. Default: 1.0)
@@ -73,8 +91,8 @@ let proxyData = false;
 
 // ARG PARSER
 const argv = parseArgs(process.argv.slice(2), {
-  boolean: ["merge-video", "keep-original-audio", "normalize-audio", "separate-tracks", "force-live-voices", "subs", "subtitles", "subs-srt", "subtitles-srt", "help", "h", "version", "v", "force-proxy", "quiet", "json"],
-  string: ["output", "output-file", "lang", "reslang", "voice-style", "proxy", "translation-volume", "original-volume", "api-token"],
+  boolean: ["merge-video", "separate-tracks", "all-dubs", "yt-subs", "yt-auto-subs", "ru", "force-live-voices", "subs", "subtitles", "subs-srt", "subtitles-srt", "help", "h", "version", "v", "force-proxy", "quiet", "json"],
+  string: ["output", "output-file", "lang", "reslang", "voice-style", "proxy", "translation-volume", "original-volume", "api-token", "dub-langs", "sub-langs"],
 });
 
 const ARG_LINKS = argv._;
@@ -87,10 +105,16 @@ const ARG_HELP = argv.help || argv.h;
 const ARG_VERSION = argv.version || argv.v;
 const PROXY_STRING = argv.proxy;
 let FORCE_PROXY = argv["force-proxy"] ?? false;
-const MERGE_VIDEO = argv["merge-video"] === true || argv["merge-video"] === "";
-const KEEP_ORIGINAL_AUDIO = argv["keep-original-audio"] ?? true;
+// Пресет --ru: RU-перевод + автодубляж RU + автосубтитры RU + главы в мульти-трек контейнере
+const RU_PACK = argv["ru"] === true || argv["ru"] === "";
+const MERGE_VIDEO = argv["merge-video"] === true || argv["merge-video"] === "" || RU_PACK;
+// ВАЖНО: эти флаги НЕ в boolean-списке minimist, т.к. minimist даёт boolean-флагам
+// значение false (не undefined) при отсутствии — ломало дефолты `?? true`.
+// Значение по умолчанию true, отключение: --keep-original-audio=false / --normalize-audio=false / --chapters=false
+const isExplicitFalse = (v) => v === false || v === "false" || v === "0";
+const KEEP_ORIGINAL_AUDIO = isExplicitFalse(argv["keep-original-audio"]) ? false : true;
+const NORMALIZE_AUDIO = isExplicitFalse(argv["normalize-audio"]) ? false : true;
 const SEPARATE_TRACKS = argv["separate-tracks"] ?? false;
-const NORMALIZE_AUDIO = argv["normalize-audio"] ?? true;
 const FORCE_LIVE_VOICES = argv["force-live-voices"] ?? false;
 const TRANSLATION_VOLUME = parseFloat(argv["translation-volume"]) || 1.0;
 const ORIGINAL_VOLUME = parseFloat(argv["original-volume"]) || 1.0;
@@ -148,6 +172,52 @@ if (
 ) {
   RESPONSE_LANG = argv.reslang;
   log(chalk.cyan(`🗣️  Response language is set to ${chalk.bold(RESPONSE_LANG.toUpperCase())}`));
+}
+
+// * Пресет --ru: мульти-трек с русским переводом + русский автодубляж (если есть)
+//   + русские автосубтитры + главы. Основная дорожка — микс перевода Яндекса с оригиналом.
+//   (RU_PACK объявлен выше — до MERGE_VIDEO)
+
+// * YouTube автодубляжи (--all-dubs / --dub-langs / --ru) — язык дорожек задаётся ОТДЕЛЬНО от --reslang
+const ALL_DUBS = argv["all-dubs"] === true || argv["all-dubs"] === "";
+const DUB_LANGS = argv["dub-langs"]
+  ? String(argv["dub-langs"])
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : null;
+const IS_DUBS_MODE = Boolean(ALL_DUBS || DUB_LANGS || RU_PACK);
+
+// * YouTube субтитры (--yt-subs / --yt-auto-subs / --ru) — языки тоже отдельным ключом --sub-langs
+const YT_SUBS_MODES = [
+  ...(argv["yt-subs"] ? [false] : []), // пользовательские (только явно)
+  ...(argv["yt-auto-subs"] || RU_PACK ? [true] : []), // автосгенерированные (в пресете --ru включены)
+];
+const IS_YT_SUBS_REQ = YT_SUBS_MODES.length > 0;
+const SUB_LANGS = argv["sub-langs"]
+  ? String(argv["sub-langs"])
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : [RESPONSE_LANG];
+
+// * Главы YouTube -> контейнер (по умолчанию ON, отключается --chapters=false)
+const CHAPTERS = isExplicitFalse(argv["chapters"]) ? false : true;
+
+if (RU_PACK) {
+  log(chalk.cyan(`🇷🇺 RU preset: multi-track RU translation + RU auto-dub + RU auto-subs + chapters`));
+}
+
+if (IS_DUBS_MODE) {
+  const effectiveDubLangs = DUB_LANGS ?? (RU_PACK ? ["ru"] : []);
+  const langsDesc = ALL_DUBS ? "все доступные" : effectiveDubLangs.join(", ");
+  log(chalk.cyan(`🎧 YouTube auto-dub mode: ${chalk.bold(langsDesc)}`));
+}
+if (IS_YT_SUBS_REQ) {
+  log(chalk.cyan(`📝 YouTube subtitles: ${YT_SUBS_MODES.map((a) => (a ? "auto" : "manual")).join(" + ")}, langs: ${chalk.bold(SUB_LANGS.join(","))}`));
+}
+if (!CHAPTERS) {
+  log(chalk.yellow(`📍 Chapters embedding is disabled`));
 }
 
 if (PROXY_STRING) {
@@ -622,16 +692,67 @@ async function main() {
                 },
               },
               {
+                title: `Downloading YouTube subtitles (ID: ${videoId}).`,
+                enabled: Boolean(OUTPUT_DIR) && IS_YT_SUBS_REQ,
+                exitOnError: false,
+                task: async (ctxSub, subtask) => {
+                  const baseName = OUTPUT_FILE
+                    ? OUTPUT_FILE.replace(/\.(mp3|mp4|srt|json)$/i, "")
+                    : clearFileName(parent.videoTitle || videoId);
+                  const files = [];
+                  const errors = [];
+                  try {
+                    for (const auto of YT_SUBS_MODES) {
+                      try {
+                        const downloaded = await youtubeInfo.downloadYouTubeSubtitles(
+                          parent.finalURL,
+                          {
+                            langs: SUB_LANGS,
+                            auto,
+                            outputDir: OUTPUT_DIR,
+                            baseName: baseName + (auto ? ".auto" : ".manual"),
+                            ...(proxyData?.proxyUrl
+                              ? { proxyUrl: proxyData.proxyUrl }
+                              : {}),
+                          },
+                        );
+                        files.push(...downloaded);
+                      } catch (e) {
+                        // у видео может не быть субтитров одного из типов — не фатально
+                        errors.push(`${auto ? "auto" : "manual"}: ${e.message}`);
+                      }
+                    }
+                    if (files.length === 0) {
+                      throw new Error(errors.join("; ") || "no subtitles found");
+                    }
+                    if (errors.length > 0 && !QUIET_MODE && !JSON_MODE) {
+                      console.log(chalk.yellow(`   └─ ⚠️  ${errors.join("; ")}`));
+                    }
+                    parent.ytSubtitleFiles = files;
+                    subtask.title = `✅ YouTube subtitles downloaded (${files.length} file(s))`;
+                    if (!QUIET_MODE && !JSON_MODE) {
+                      for (const f of files) {
+                        console.log(chalk.green(`   └─ 📝 ${f}`));
+                      }
+                    }
+                  } catch (e) {
+                    subtask.title = `❌ YouTube subtitles failed: ${e.message}`;
+                    throw new Error(chalk.red(`YouTube subtitles failed: ${e.message}`));
+                  }
+                },
+              },
+              {
                 title: `🎬 Merging video with translation (ID: ${videoId})`,
                 exitOnError: false,
                 enabled: Boolean(OUTPUT_DIR) && Boolean(MERGE_VIDEO) && !IS_SUBS_REQ,
                 task: async (ctxSub, subtask) => {
-                  if (
-                    !(
-                      parent.translateResult?.success &&
-                      parent.translateResult?.urlOrError
-                    )
-                  ) {
+                  const hasYandexAudio = Boolean(
+                    parent.translateResult?.success &&
+                      parent.translateResult?.urlOrError,
+                  );
+                  // В мульти-трек режиме (--all-dubs/--dub-langs) можно собирать контейнер
+                  // и без перевода Яндекса (только оригинал + дубляжи)
+                  if (!hasYandexAudio && !IS_DUBS_MODE) {
                     throw new Error(
                       chalk.red(
                         `Merging failed! Audio link not found`,
@@ -641,8 +762,17 @@ async function main() {
 
                   if (!QUIET_MODE && !JSON_MODE) {
                     console.log(chalk.cyan(`   └─ 🎥 Starting video merge process...`));
-                    console.log(chalk.gray(`      ├─ Original volume: ${ORIGINAL_VOLUME * 100}%`));
-                    console.log(chalk.gray(`      └─ Translation volume: ${TRANSLATION_VOLUME * 100}%`));
+                    if (IS_DUBS_MODE) {
+                      const effectiveLangs = DUB_LANGS ?? (RU_PACK ? ["ru"] : []);
+                      const langsDesc = ALL_DUBS ? "ALL available" : effectiveLangs.join(", ");
+                      console.log(chalk.gray(`      ├─ YouTube auto-dubs: ${langsDesc}`));
+                      console.log(chalk.gray(`      ├─ Yandex translation track: ${hasYandexAudio ? "yes" : "no"}`));
+                      console.log(chalk.gray(`      ├─ Mix track volumes: original ${ORIGINAL_VOLUME * 100}% / translation ${TRANSLATION_VOLUME * 100}%`));
+                      console.log(chalk.gray(`      └─ Chapters: ${CHAPTERS ? "embed" : "skip"}`));
+                    } else {
+                      console.log(chalk.gray(`      ├─ Original volume: ${ORIGINAL_VOLUME * 100}%`));
+                      console.log(chalk.gray(`      └─ Translation volume: ${TRANSLATION_VOLUME * 100}%`));
+                    }
                   }
 
                   const audioFilename = OUTPUT_FILE
@@ -659,19 +789,23 @@ async function main() {
                       : `${clearFileName(videoId)}---${uuidv4()}.mp4`;
                   const videoPath = `${OUTPUT_DIR}/${videoFilename}`;
 
-                  subtask.title = `📥 Downloading audio for merge...`;
-                  if (!QUIET_MODE && !JSON_MODE) {
-                    console.log(chalk.cyan(`   └─ 📥 Step 1/3: Downloading translation audio...`));
-                  }
-                  await downloadFile(
-                    parent.translateResult.urlOrError,
-                    audioPath,
-                    null,
-                    null,
-                  );
-                  const audioSize = (fs.statSync(audioPath).size / 1024 / 1024).toFixed(2);
-                  if (!QUIET_MODE && !JSON_MODE) {
-                    console.log(chalk.green(`      └─ ✅ Audio downloaded (${audioSize} MB)`));
+                  if (hasYandexAudio) {
+                    subtask.title = `📥 Downloading audio for merge...`;
+                    if (!QUIET_MODE && !JSON_MODE) {
+                      console.log(chalk.cyan(`   └─ 📥 Step 1/3: Downloading translation audio...`));
+                    }
+                    await downloadFile(
+                      parent.translateResult.urlOrError,
+                      audioPath,
+                      null,
+                      null,
+                    );
+                    const audioSize = (fs.statSync(audioPath).size / 1024 / 1024).toFixed(2);
+                    if (!QUIET_MODE && !JSON_MODE) {
+                      console.log(chalk.green(`      └─ ✅ Audio downloaded (${audioSize} MB)`));
+                    }
+                  } else if (!QUIET_MODE && !JSON_MODE) {
+                    console.log(chalk.yellow(`   └─ ⚠️  Skipping Yandex audio (not available) — building dubs-only container`));
                   }
 
                   subtask.title = `🎬 Creating video with translation...`;
@@ -680,22 +814,44 @@ async function main() {
                     console.log(chalk.gray(`      ├─ This may take several minutes...`));
                     console.log(chalk.gray(`      └─ Video: ${videoFilename}`));
                   }
-                  
-                  await createVideoWithTranslation(
-                    parent.finalURL,
-                    audioPath,
-                    videoPath,
-                    {
-                      keepOriginalAudio: KEEP_ORIGINAL_AUDIO,
-                      separateTracks: SEPARATE_TRACKS,
-                      audioVolume: ORIGINAL_VOLUME,
-                      translationVolume: TRANSLATION_VOLUME,
-                      normalizeAudio: NORMALIZE_AUDIO,
-                      ...(proxyData?.proxyUrl
-                        ? { proxyUrl: proxyData.proxyUrl }
-                        : {}),
-                    },
-                  );
+
+                  if (IS_DUBS_MODE) {
+                    // Мульти-трек: микс + перевод + оригинал + все автодубляжи + главы
+                    const dubInfo = await createVideoWithAllAudioTracks(
+                      parent.finalURL,
+                      hasYandexAudio && fs.existsSync(audioPath) ? audioPath : null,
+                      videoPath,
+                      {
+                        dubLangs: ALL_DUBS
+                          ? "all"
+                          : DUB_LANGS ?? (RU_PACK ? ["ru"] : null),
+                        audioVolume: ORIGINAL_VOLUME,
+                        translationVolume: TRANSLATION_VOLUME,
+                        chapters: CHAPTERS,
+                        ...(proxyData?.proxyUrl
+                          ? { proxyUrl: proxyData.proxyUrl }
+                          : {}),
+                      },
+                    );
+                    parent.dubInfo = dubInfo;
+                  } else {
+                    await createVideoWithTranslation(
+                      parent.finalURL,
+                      audioPath,
+                      videoPath,
+                      {
+                        keepOriginalAudio: KEEP_ORIGINAL_AUDIO,
+                        separateTracks: SEPARATE_TRACKS,
+                        audioVolume: ORIGINAL_VOLUME,
+                        translationVolume: TRANSLATION_VOLUME,
+                        normalizeAudio: NORMALIZE_AUDIO,
+                        chapters: CHAPTERS,
+                        ...(proxyData?.proxyUrl
+                          ? { proxyUrl: proxyData.proxyUrl }
+                          : {}),
+                      },
+                    );
+                  }
 
                   // Удаляем временный аудио файл
                   if (!QUIET_MODE && !JSON_MODE) {
@@ -743,7 +899,17 @@ async function main() {
                       result.mergedVideoPath = parent.mergedVideoPath;
                       result.mergedVideoSize = parent.mergedVideoSize;
                     }
-                    
+
+                    if (parent.ytSubtitleFiles) {
+                      result.youtubeSubtitleFiles = parent.ytSubtitleFiles;
+                    }
+
+                    if (parent.dubInfo) {
+                      result.dubs = parent.dubInfo.dubs;
+                      result.audioTracks = parent.dubInfo.audioTracks;
+                      result.chaptersCount = parent.dubInfo.chaptersCount;
+                    }
+
                     processedResults.push(result);
                   }
                 },
