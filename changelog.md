@@ -1,3 +1,48 @@
+# 1.10.0 (2026-09-06 - Playlist Mode)
+
+## New Features
+
+- **`--playlist`**: playlist links are expanded into individual videos and processed with all other flags as usual. `youtube.com/playlist?list=...` links are expanded automatically; the flag additionally expands `watch?v=...&list=...` URLs into the full playlist (without it, a watch link with `list=` is processed as a single video, as before). Videos are processed in parallel via `yt-dlp --flat-playlist` (fast, no downloads). New helper `getPlaylistEntries` in `src/youtubeInfo.js`.
+
+---
+
+# 1.9.0 (2026-09-06 - RU preset, Multi-track Dubs, Chapters, YouTube Subtitles)
+
+## New Features
+
+- **`--ru` preset**: one-command Russian pack — multi-track mp4 where the default audio track is the Yandex RU translation mixed over the original, plus the pure Yandex RU track, the original audio and the YouTube RU auto-dub (if available); also downloads Russian auto-generated subtitles (.srt) and embeds chapters. Equivalent to `--merge-video --dub-langs="ru" --yt-auto-subs --sub-langs="ru"`.
+- **`--all-dubs` / `--dub-langs "ru,de"`** (with `--merge-video`): multi-track container — mix track (Yandex translation over quieted original, default), pure Yandex translation, original audio, and YouTube auto-dub tracks in chosen languages (or all available). Tracks are titled (mp4 handler_name) and tagged with proper ISO 639-2 language codes. Works even when Yandex translation fails (dubs-only container).
+- **`--chapters`** (default: true, disable with `--chapters=false`): YouTube chapters are embedded into the output mp4 via ffmetadata + `-map_chapters` (applies to plain merge, separate-tracks and multi-track modes).
+- **`--yt-subs` / `--yt-auto-subs`**: download user-uploaded and/or auto-generated YouTube subtitles; **`--sub-langs "ru,en"`** sets subtitle languages separately from `--reslang` (Yandex subtitles via `--subs` still use `--reslang`). Retries on HTTP 429 and automatic fallback to the original auto-track when translated captions are rate-limited.
+- New module `src/youtubeInfo.js` (yt-dlp -J cache, dub language detection, chapters, dub track and subtitle downloads).
+
+## Bug Fixes
+
+- **Default values of `--keep-original-audio` and `--normalize-audio` were broken**: minimist returns `false` (not `undefined`) for declared boolean flags, so `?? true` never applied. Options now work as documented (mix + normalization ON by default). Flags moved out of the boolean list, parsed manually.
+- **dynaudnorm filter typo**: `gaussize` → `gausssize` (the normalization branch always failed with "Option not found" once actually enabled).
+- **mp4 track metadata**: stream `title` is written as `handler_name` (mp4 muxer ignores stream title); 2-letter language codes ("ru") silently dropped by the mp4 muxer — now converted to ISO 639-2 ("rus").
+
+---
+
+# 1.8.0 (2026-09-06 - Long Videos Support + Yandex Auth)
+
+## New Features
+
+- **Long videos support (1+ hours)**: implemented the Yandex `AUDIO_REQUESTED` protocol — when Yandex can't fetch the audio itself, vot-cli-live now downloads the audio track via yt-dlp and uploads it to Yandex in ~5 MB chunks (same as the VOT browser extension)
+- **PART_CONTENT status handling**: long videos are translated in parts; the CLI now waits for the full translation instead of failing with "Unknown translation status"
+- **SESSION_REQUIRED status handling**: new `--api-token` argument (or `VOT_API_TOKEN` env variable) for videos that require Yandex ID authorization; automatic fallback from live voices to TTS
+- **Server-driven waiting**: polling now follows the `remainingTime` hints from Yandex (up to 90 minutes) instead of fixed 10s/30s intervals with a 5-minute cap
+
+## Fixes / Internal
+
+- Added `translationId`, `shouldRetry`, `isLivelyVoice` fields to the translation response protobuf schema
+- Added protobuf messages for audio upload (`VideoTranslationAudioRequest/Response`, `ChunkAudioObject`, `PartialAudioBufferObject`)
+- `yandexRawRequest` now supports PUT method and promise-style usage
+- New module `src/audioUploader.js` (yt-dlp audio download + chunked upload)
+- Status 7 is no longer misreported as "Translation not available for this video"
+
+---
+
 # 1.7.5 (2024-12-17 - Quiet & JSON Output Modes + Translation Polling)
 
 ## ✨ New Features

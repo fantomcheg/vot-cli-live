@@ -51,9 +51,39 @@ const VideoTranslationResponse = new protobuf.Type("VideoTranslationResponse")
   .add(new protobuf.Field("status", 4, "int32"))
   .add(new protobuf.Field("remainingTime", 5, "int32")) // secs before translation (used as interval before next request in yaBrowser)
   .add(new protobuf.Field("unknown0", 6, "int32")) // unknown 0 (1st request) -> 10 (2nd, 3th and etc requests)
-  .add(new protobuf.Field("unknown1", 7, "string"))
+  .add(new protobuf.Field("translationId", 7, "string")) // id of translation (needed to upload audio when Yandex requests it)
   .add(new protobuf.Field("language", 8, "string")) // detected language (if the wrong one is set)
-  .add(new protobuf.Field("message", 9, "string"));
+  .add(new protobuf.Field("message", 9, "string"))
+  .add(new protobuf.Field("isLivelyVoice", 10, "bool"))
+  .add(new protobuf.Field("allowToTranslateVideo", 11, "bool"))
+  .add(new protobuf.Field("shouldRetry", 12, "int32"))
+  .add(new protobuf.Field("unknown3", 13, "int32"));
+
+// * Messages for uploading audio to Yandex when it responds with AUDIO_REQUESTED (status 6).
+// * The client downloads the audio track itself and uploads it in chunks
+// * (this is how the browser extension translates long/uncached videos).
+const PartialAudioBufferObject = new protobuf.Type("PartialAudioBufferObject")
+  .add(new protobuf.Field("chunkId", 1, "int32"))
+  .add(new protobuf.Field("audioFile", 2, "bytes"));
+
+const ChunkAudioObject = new protobuf.Type("ChunkAudioObject")
+  .add(new protobuf.Field("audioBuffer", 1, "PartialAudioBufferObject"))
+  .add(new protobuf.Field("audioPartsLength", 2, "int32")) // total chunks count (0 while uploading, real value on the last chunk)
+  .add(new protobuf.Field("fileId", 3, "string"))
+  .add(new protobuf.Field("version", 4, "int32"));
+
+const VideoTranslationAudioRequest = new protobuf.Type(
+  "VideoTranslationAudioRequest",
+)
+  .add(new protobuf.Field("translationId", 1, "string"))
+  .add(new protobuf.Field("url", 2, "string"))
+  .add(new protobuf.Field("partialAudioInfo", 4, "ChunkAudioObject"));
+
+const VideoTranslationAudioResponse = new protobuf.Type(
+  "VideoTranslationAudioResponse",
+)
+  .add(new protobuf.Field("status", 1, "int32"))
+  .add(new protobuf.Field("remainingChunks", 2, "string", "repeated"));
 
 const VideoSubtitlesObject = new protobuf.Type("VideoSubtitlesObject")
   .add(new protobuf.Field("language", 1, "string"))
@@ -98,7 +128,11 @@ const root = new protobuf.Root()
   .add(VideoStreamPingRequest)
   .add(VideoStreamRequest)
   .add(VideoStreamObject)
-  .add(VideoStreamResponse);
+  .add(VideoStreamResponse)
+  .add(PartialAudioBufferObject)
+  .add(ChunkAudioObject)
+  .add(VideoTranslationAudioRequest)
+  .add(VideoTranslationAudioResponse);
 
 // Export the encoding and decoding functions
 export default {
@@ -154,5 +188,25 @@ export default {
   },
   decodeStreamResponse(response) {
     return root.VideoStreamResponse.decode(new Uint8Array(response));
+  },
+  // Кодирует один чанк аудио для PUT /video-translation/audio
+  // chunkMeta: { chunkId, audioPartsLength, fileId, version }
+  encodeTranslationAudioRequest(url, translationId, audioChunk, chunkMeta) {
+    return root.VideoTranslationAudioRequest.encode({
+      url,
+      translationId,
+      partialAudioInfo: {
+        audioBuffer: {
+          audioFile: audioChunk,
+          chunkId: chunkMeta.chunkId,
+        },
+        audioPartsLength: chunkMeta.audioPartsLength,
+        fileId: chunkMeta.fileId,
+        version: chunkMeta.version,
+      },
+    }).finish();
+  },
+  decodeTranslationAudioResponse(response) {
+    return root.VideoTranslationAudioResponse.decode(new Uint8Array(response));
   },
 };
