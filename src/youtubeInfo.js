@@ -205,10 +205,33 @@ function listNewSubtitleFiles(outputDir, baseName) {
     .map((f) => path.join(outputDir, f));
 }
 
+/**
+ * Раскрывает плейлист в список URL отдельных видео (быстро, без скачивания).
+ * @param {string} playlistUrl ссылка на плейлист или watch-ссылку с &list=
+ * @returns {Promise<string[]>} URL видео
+ */
+export async function getPlaylistEntries(playlistUrl, proxyUrl = null) {
+  const command = `yt-dlp --flat-playlist -J${proxyArgs(proxyUrl)} ${JSON.stringify(playlistUrl)}`;
+  const { stdout } = await execAsync(command, {
+    timeout: 300000,
+    maxBuffer: 128 * 1024 * 1024,
+  });
+  const info = JSON.parse(stdout);
+  const entries = Array.isArray(info.entries) ? info.entries : [];
+  const urls = entries
+    .map((e) => e.url || (e.id ? `https://youtu.be/${e.id}` : null))
+    .filter(Boolean);
+  if (urls.length === 0) {
+    throw new Error("Playlist is empty or no videos found");
+  }
+  return urls;
+}
+
 export default {
   getVideoInfo,
   getDubLanguages,
   getVideoChapters,
   downloadDubTrack,
   downloadYouTubeSubtitles,
+  getPlaylistEntries,
 };

@@ -67,11 +67,20 @@ async function downloadYouTubeVideo(videoUrl, outputDir, proxyUrl) {
         "yt-dlp timeout: Video download took too long (10 minutes)",
       );
     }
-    // Если файл скачался но с другим расширением, попробуем найти его
+    // Пробуем найти СВОЙ скачанный файл (по собственному префиксу temp_video_<ts>).
+    // ВАЖНО: не берём .part и стримы вида .fXXX — при параллельной обработке
+    // плейлиста это чужие незавершённые файлы (можно было склеить видео из куска).
     const dir = path.dirname(videoPath);
+    const prefix = path.basename(videoPath, path.extname(videoPath));
     const files = fs
       .readdirSync(dir)
-      .filter((f) => f.startsWith("temp_video_"));
+      .filter(
+        (f) =>
+          (f === `${prefix}.mp4` ||
+            f === `${prefix}.mkv` ||
+            f === `${prefix}.webm`) &&
+          !f.endsWith(".part"),
+      );
     if (files.length > 0) {
       return path.join(dir, files[0]);
     }

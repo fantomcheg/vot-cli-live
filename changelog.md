@@ -1,3 +1,11 @@
+# 1.10.0 (2026-09-06 - Playlist Mode)
+
+## New Features
+
+- **`--playlist`**: playlist links are expanded into individual videos and processed with all other flags as usual. `youtube.com/playlist?list=...` links are expanded automatically; the flag additionally expands `watch?v=...&list=...` URLs into the full playlist (without it, a watch link with `list=` is processed as a single video, as before). Videos are processed in parallel via `yt-dlp --flat-playlist` (fast, no downloads). New helper `getPlaylistEntries` in `src/youtubeInfo.js`.
+
+---
+
 # 1.9.0 (2026-09-06 - RU preset, Multi-track Dubs, Chapters, YouTube Subtitles)
 
 ## New Features

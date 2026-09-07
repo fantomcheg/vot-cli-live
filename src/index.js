@@ -55,6 +55,10 @@ Args:
          the original audio and the YouTube RU auto-dub (if available). Also downloads
          Russian auto-generated subtitles and embeds chapters. Equivalent to:
          --merge-video --dub-langs="ru" --yt-auto-subs --sub-langs="ru"
+  --playlist — Expand playlist links into individual videos and process them all.
+              youtube.com/playlist?list=... links are expanded automatically;
+              this flag also expands watch?v=...&list=... links to the full playlist.
+              Combine with other flags (--ru, --merge-video, --yt-auto-subs, ...) as usual
   --keep-original-audio — Keep original audio when merging (mix with translation. Default: true)
   --separate-tracks — Don't mix: put translation and original as separate audio tracks
                       (switchable in the player. Requires --merge-video. Default: false)
@@ -91,7 +95,7 @@ let proxyData = false;
 
 // ARG PARSER
 const argv = parseArgs(process.argv.slice(2), {
-  boolean: ["merge-video", "separate-tracks", "all-dubs", "yt-subs", "yt-auto-subs", "ru", "force-live-voices", "subs", "subtitles", "subs-srt", "subtitles-srt", "help", "h", "version", "v", "force-proxy", "quiet", "json"],
+  boolean: ["merge-video", "separate-tracks", "all-dubs", "yt-subs", "yt-auto-subs", "ru", "playlist", "force-live-voices", "subs", "subtitles", "subs-srt", "subtitles-srt", "help", "h", "version", "v", "force-proxy", "quiet", "json"],
   string: ["output", "output-file", "lang", "reslang", "voice-style", "proxy", "translation-volume", "original-volume", "api-token", "dub-langs", "sub-langs"],
 });
 
@@ -107,6 +111,9 @@ const PROXY_STRING = argv.proxy;
 let FORCE_PROXY = argv["force-proxy"] ?? false;
 // Пресет --ru: RU-перевод + автодубляж RU + автосубтитры RU + главы в мульти-трек контейнере
 const RU_PACK = argv["ru"] === true || argv["ru"] === "";
+// Режим --playlist: раскрывать watch?v=...&list=... в полный плейлист
+// (ссылки youtube.com/playlist?list=... раскрываются и без флага)
+const PLAYLIST_MODE = argv["playlist"] === true || argv["playlist"] === "";
 const MERGE_VIDEO = argv["merge-video"] === true || argv["merge-video"] === "" || RU_PACK;
 // ВАЖНО: эти флаги НЕ в boolean-списке minimist, т.к. minimist даёт boolean-флагам
 // значение false (не undefined) при отсутствии — ломало дефолты `?? true`.
@@ -398,6 +405,37 @@ async function main() {
     renderer: (QUIET_MODE || JSON_MODE) ? 'silent' : 'default',
   });
 
+  // * Раскрытие плейлистов (--playlist)
+  // * - youtube.com/playlist?list=... раскрывается всегда
+  // * - watch?v=...&list=... раскрывается только с флагом --playlist
+  let processLinks = ARG_LINKS;
+  if (PLAYLIST_MODE || ARG_LINKS.some((u) => /youtube\.com\/playlist\?list=/i.test(u))) {
+    const expanded = [];
+    for (const url of ARG_LINKS) {
+      const isPlaylistPage = /youtube\.com\/playlist\?list=/i.test(url);
+      const hasListParam = /[?&]list=/i.test(url);
+      if (isPlaylistPage || (PLAYLIST_MODE && hasListParam)) {
+        try {
+          log(chalk.cyan(`📋 Expanding playlist: ${url}`));
+          const videoUrls = await youtubeInfo.getPlaylistEntries(
+            url,
+            proxyData?.proxyUrl ?? null,
+          );
+          log(chalk.green(`   └─ ✅ ${videoUrls.length} video(s) found in playlist`));
+          expanded.push(...videoUrls);
+        } catch (e) {
+          logError(chalk.red(`Failed to expand playlist ${url}: ${e.message}`));
+        }
+      } else {
+        if (PLAYLIST_MODE && !hasListParam) {
+          logError(chalk.yellow(`⚠️  Not a playlist link (no list=), processing as single video: ${url}`));
+        }
+        expanded.push(url);
+      }
+    }
+    processLinks = expanded;
+  }
+
   // Красивый баннер при запуске (только в обычном режиме)
   if (!QUIET_MODE && !JSON_MODE) {
     console.log(chalk.cyan('\n╔═══════════════════════════════════════════════════════════╗'));
@@ -405,9 +443,9 @@ async function main() {
     console.log(chalk.cyan('╚═══════════════════════════════════════════════════════════╝'));
     console.log(chalk.gray('  Это форк продукта https://github.com/FOSWLY/vot-cli/'));
     console.log(chalk.gray('  Вся слава Илье @ToilOfficial 🙏\n'));
-    
+
     console.log(chalk.gray(`📦 Version: ${version}`));
-    console.log(chalk.gray(`🎯 Videos to process: ${ARG_LINKS.length}`));
+    console.log(chalk.gray(`🎯 Videos to process: ${processLinks.length}`));
     if (MERGE_VIDEO) {
       console.log(chalk.yellow(`🎬 Video merge mode: ${chalk.bold('ENABLED')}`));
       if (SEPARATE_TRACKS) {
@@ -433,7 +471,7 @@ async function main() {
     log(chalk.green(`✅ Output directory exists: ${OUTPUT_DIR}\n`));
   }
 
-  for (const url of ARG_LINKS) {
+  for (const url of processLinks) {
     const service = validate(url);
     if (!service) {
       logError(chalk.red(`URL: ${url} is unknown service`));
@@ -968,7 +1006,7 @@ async function main() {
       console.log(chalk.green('║') + chalk.bold.white('            🎉 ALL TASKS COMPLETED! 🎉                 ') + chalk.green('║'));
       console.log(chalk.green('╚═══════════════════════════════════════════════════════════╝'));
       console.log('');
-      console.log(chalk.cyan(`✅ Successfully processed ${ARG_LINKS.length} video(s)`));
+      console.log(chalk.cyan(`✅ Successfully processed ${processLinks.length} video(s)`));
       if (OUTPUT_DIR) {
         console.log(chalk.cyan(`📁 Output directory: ${OUTPUT_DIR}`));
       }
